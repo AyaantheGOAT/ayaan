@@ -44,7 +44,7 @@ async function init() {
   sel.innerHTML = state.config.voices.map((v) => `<option value="${v.id}">${esc(v.name)} — ${esc(v.style)}</option>`).join("");
 
   const warn = [];
-  if (!state.config.claude) warn.push("<b>ANTHROPIC_API_KEY</b> isn't set on the server, so the interviewer can't run.");
+  if (!state.config.ai) warn.push("No AI key found: put <b>OPENAI_API_KEY</b> or <b>ANTHROPIC_API_KEY</b> in your <code>.env</code> file and restart the server.");
   if (!state.config.elevenlabs) {
     warn.push("<b>ELEVENLABS_API_KEY</b> isn't set: the interviewer will use your browser's built-in voice and you'll type your answers.");
     state.useBrowserVoice = true;

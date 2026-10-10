@@ -4,13 +4,16 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { pdfToText, clean, fetchJobPosting } from "./lib/ingest.js";
-import { planInterview, interviewerTurn, generateFeedback, LENGTHS } from "./lib/claude.js";
+import { planInterview, interviewerTurn, generateFeedback, LENGTHS, aiProvider } from "./lib/ai.js";
 import { streamSpeech, transcribe, VOICES, hasElevenLabs } from "./lib/elevenlabs.js";
 import { analyzeDelivery } from "./lib/delivery.js";
 
-try {
-  process.loadEnvFile?.(); // Node 20.12+: picks up .env if present
-} catch {}
+// Load secrets from .env (project root) or env/.env — both are gitignored.
+for (const file of [".env", "env/.env"]) {
+  try {
+    process.loadEnvFile(path.join(path.dirname(fileURLToPath(import.meta.url)), file));
+  } catch {}
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -44,7 +47,7 @@ app.get("/api/config", (_req, res) => {
     voices: VOICES,
     lengths: LENGTHS,
     elevenlabs: hasElevenLabs(),
-    claude: Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN),
+    ai: aiProvider(),
   });
 });
 
@@ -176,6 +179,8 @@ app.use((err, _req, res, _next) => {
 const port = Number(process.env.PORT) || 3000;
 app.listen(port, () => {
   console.log(`RU Employed running → http://localhost:${port}`);
-  if (!process.env.ANTHROPIC_API_KEY) console.warn("⚠  ANTHROPIC_API_KEY not set — the interviewer can't think.");
+  const ai = aiProvider();
+  if (ai) console.log(`AI brain: ${ai === "openai" ? "OpenAI" : "Claude"}`);
+  else console.warn("⚠  No ANTHROPIC_API_KEY or OPENAI_API_KEY in .env — the interviewer can't think.");
   if (!hasElevenLabs()) console.warn("⚠  ELEVENLABS_API_KEY not set — falling back to the browser's built-in voice and typed answers.");
 });

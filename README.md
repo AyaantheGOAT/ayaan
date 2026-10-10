@@ -13,11 +13,11 @@ You upload your resume, your LinkedIn and the job description. An AI interviewer
 
 ```
 Resume PDF ──┐
-LinkedIn PDF ┼─► text ─► Claude designs a realistic interview plan for this exact role/company
+LinkedIn PDF ┼─► text ─► AI designs a realistic interview plan for this exact role/company
 Job URL ─────┘                                  │
                                                 ▼
            ┌───────────── live call loop ──────────────┐
-           │ Claude (interviewer persona) → next line  │
+           │ AI (interviewer persona) → next line      │
            │ ElevenLabs TTS → interviewer speaks       │
            │ You answer → mic recording                │
            │ ElevenLabs Scribe STT → transcript +      │
@@ -25,14 +25,14 @@ Job URL ─────┘                                  │
            └───────────────────────────────────────────┘
                                                 │
                                                 ▼
-         Claude grades transcript + metrics → STAR / delivery / fit / plan report
+         AI grades transcript + metrics → STAR / delivery / fit / plan report
 ```
 
 | Piece | Tech |
 |---|---|
 | Interviewer voice | ElevenLabs text-to-speech (streaming, `eleven_flash_v2_5` for low latency) |
 | Hearing your answers | ElevenLabs Scribe speech-to-text with word-level timestamps |
-| Interview design, live interviewer, feedback | Claude (`claude-opus-5-5`) with structured outputs |
+| Interview design, live interviewer, feedback | Claude (`claude-opus-5-5`) **or** OpenAI (`gpt-4o`, change with `OPENAI_MODEL`), using structured outputs. The app uses whichever key is in `.env`. |
 | Server | Node.js + Express |
 | Frontend | Vanilla HTML/CSS/JS with a Web Audio voice visualizer and MediaRecorder |
 
@@ -42,7 +42,7 @@ Requires Node 20+.
 
 ```bash
 npm install
-cp .env.example .env   # add ANTHROPIC_API_KEY and ELEVENLABS_API_KEY
+cp .env.example .env   # add OPENAI_API_KEY (or ANTHROPIC_API_KEY) + ELEVENLABS_API_KEY
 npm start              # → http://localhost:3000
 ```
 
@@ -58,7 +58,7 @@ Open it in Chrome, Edge or Safari, allow microphone access, and use headphones s
 ```
 server.js           Express API: sessions, answers, speech, feedback
 lib/ingest.js       PDF + job-page text extraction
-lib/claude.js       Interview planner, live interviewer, feedback grader
+lib/ai.js           Interview planner, live interviewer, feedback grader (Claude or OpenAI)
 lib/elevenlabs.js   TTS streaming + Scribe transcription
 lib/delivery.js     Pace / pause / filler / hedge / ownership metrics
 public/             Single-page UI (setup → call → report)
@@ -69,4 +69,5 @@ test/               Unit tests (npm test)
 
 - Sessions live in memory and expire after 3 hours, which is fine for a demo. Use Redis or a database before running multiple instances.
 - A transcript doesn't capture vocal pitch, so "tone" is inferred from pacing, pauses, fillers, hedging and word choice. The report says this.
-- Requests use Claude's server-side refusal fallback (`fallbacks: "default"`), so a false-positive safety decline doesn't end an interview partway through.
+- On Claude, requests use the server-side refusal fallback (`fallbacks: "default"`), so a false-positive safety decline doesn't end an interview partway through.
+- **Keys stay private:** `.env` (and an `env/` folder, if you prefer to keep it there) are in `.gitignore`, so they never get committed.
