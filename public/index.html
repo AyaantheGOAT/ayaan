@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RU Employed — AI Mock Interviewer</title>
+  <meta name="description" content="Practice a real-sounding voice interview built from your resume, LinkedIn and the actual job description, then get STAR-level feedback and an improvement plan." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="RU Employed home">
+      <span class="logo">RU</span><span>Employed</span>
+    </a>
+    <span class="tag">Voice mock interviews · powered by ElevenLabs + Claude</span>
+  </header>
+
+  <main>
+    <!-- ============ SETUP ============ -->
+    <section id="view-setup" class="view active">
+      <div class="hero">
+        <h1>Walk into your interview having <em>already done it.</em></h1>
+        <p>Upload your resume, LinkedIn and the job posting. An AI interviewer who has read all three will call you, ask what <strong>this</strong> company would actually ask, and then tell you exactly how to sharpen every story.</p>
+      </div>
+
+      <div id="keys-warning" class="banner hidden"></div>
+
+      <form id="setup-form" class="card setup" autocomplete="off">
+        <div class="grid">
+          <fieldset>
+            <legend><span class="step">1</span> Your resume <span class="req">required</span></legend>
+            <label class="drop" data-for="resumeFile">
+              <input type="file" name="resumeFile" id="resumeFile" accept=".pdf,.txt,.md" />
+              <span class="drop-text">Drop PDF or click to upload</span>
+            </label>
+            <details><summary>or paste text</summary><textarea name="resumeText" rows="6" placeholder="Paste your resume…"></textarea></details>
+          </fieldset>
+
+          <fieldset>
+            <legend><span class="step">2</span> LinkedIn <span class="opt">optional</span></legend>
+            <label class="drop" data-for="linkedinFile">
+              <input type="file" name="linkedinFile" id="linkedinFile" accept=".pdf,.txt,.md" />
+              <span class="drop-text">Drop your LinkedIn PDF</span>
+            </label>
+            <p class="hint">On your LinkedIn profile: <b>More → Save to PDF</b>.</p>
+            <details><summary>or paste your About / Experience</summary><textarea name="linkedinText" rows="6" placeholder="Paste LinkedIn sections…"></textarea></details>
+          </fieldset>
+
+          <fieldset class="wide">
+            <legend><span class="step">3</span> The job <span class="req">required</span></legend>
+            <input type="url" name="jobUrl" placeholder="https://careers.company.com/job/12345" />
+            <details><summary>or paste the job description</summary><textarea name="jobText" rows="6" placeholder="Paste the full job posting…"></textarea></details>
+          </fieldset>
+
+          <fieldset class="wide options">
+            <legend><span class="step">4</span> Interview settings</legend>
+            <div class="row">
+              <label>Focus
+                <select name="focus">
+                  <option value="mixed">Realistic mix</option>
+                  <option value="behavioral">Behavioral / culture fit</option>
+                  <option value="technical">Role & technical experience</option>
+                </select>
+              </label>
+              <label>Length
+                <select name="length">
+                  <option value="short">Quick · 4 questions</option>
+                  <option value="standard" selected>Standard · 6 questions</option>
+                  <option value="long">Full loop · 9 questions</option>
+                </select>
+              </label>
+              <label>Interviewer voice
+                <select name="voiceId" id="voiceId"></select>
+              </label>
+            </div>
+            <label><span>Anything the interviewer should know? <span class="opt">optional</span></span>
+              <input type="text" name="notes" maxlength="500" placeholder="e.g. This is the final round with the hiring manager" />
+            </label>
+          </fieldset>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn primary big" id="start-btn">
+            <span class="btn-label">Start my interview</span>
+          </button>
+          <p class="hint center">Use headphones and a quiet room. You'll be asked for microphone access.</p>
+        </div>
+        <p id="setup-error" class="error" role="alert"></p>
+      </form>
+
+      <div class="how">
+        <div><b>🎙️ All voice</b><span>The interviewer speaks with an ElevenLabs voice. You answer out loud.</span></div>
+        <div><b>📄 It read your resume</b><span>Expect questions about your actual projects and how they fit the company mission.</span></div>
+        <div><b>⭐ STAR-level feedback</b><span>What to expand, what to cut, and how you sounded — then a plan to improve.</span></div>
+      </div>
+    </section>
+
+    <!-- ============ LOADING ============ -->
+    <section id="view-loading" class="view">
+      <div class="card loading">
+        <div class="spinner"></div>
+        <h2 id="loading-title">Reading your resume…</h2>
+        <p id="loading-sub" class="muted">Designing an interview for this exact role.</p>
+      </div>
+    </section>
+
+    <!-- ============ INTERVIEW ============ -->
+    <section id="view-interview" class="view">
+      <div class="call">
+        <div class="call-head">
+          <div>
+            <div class="muted small" id="call-company"></div>
+            <h2 id="call-role"></h2>
+          </div>
+          <div class="call-meta">
+            <span class="live"><i></i> LIVE</span>
+            <span id="call-timer">00:00</span>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="person interviewer" id="p-interviewer">
+            <div class="orb" id="orb"><canvas id="viz" width="240" height="240"></canvas><span id="interviewer-initial">A</span></div>
+            <div class="who"><b id="interviewer-name"></b><span id="interviewer-title" class="muted small"></span></div>
+          </div>
+        </div>
+
+        <p id="status" class="status">Connecting…</p>
+        <p id="caption" class="caption"></p>
+
+        <div class="controls">
+          <button id="mic-btn" class="mic" disabled aria-label="Start answering">
+            <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true"><path fill="currentColor" d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg>
+          </button>
+          <div class="mic-hint" id="mic-hint">Tap (or press <kbd>Space</kbd>) to answer, tap again when you're done</div>
+        </div>
+
+        <form id="type-form" class="type-form hidden">
+          <textarea id="type-input" rows="3" placeholder="Type your answer…"></textarea>
+          <button class="btn primary" type="submit">Send</button>
+        </form>
+
+        <div class="call-foot">
+          <button class="btn ghost" id="toggle-type">⌨️ Type instead</button>
+          <button class="btn ghost" id="replay-btn">↻ Repeat question</button>
+          <button class="btn ghost" id="toggle-transcript">📝 Transcript</button>
+          <button class="btn danger" id="end-btn">End & get feedback</button>
+        </div>
+
+        <div id="transcript" class="transcript hidden" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ============ REPORT ============ -->
+    <section id="view-report" class="view">
+      <div id="report"></div>
+    </section>
+  </main>
+
+  <footer class="foot muted small">Built at HackRU · Voice by ElevenLabs · Interviewer & coaching by Claude</footer>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
