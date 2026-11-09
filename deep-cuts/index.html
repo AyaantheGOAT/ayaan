@@ -1,0 +1,563 @@
+<title>RU Deep Cuts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="A daily Rutgers–New Brunswick answer game. Three prompts a day; the fewer Knights who say your answer, the more it's worth.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=Silkscreen&display=swap">
+<style>
+/* Layout: one narrow column like a phone card. A bus destination sign (LED) heads
+   the page; the day's three prompts are the three "stops" on today's route. */
+:root {
+  --bg: #f5f2f2;
+  --surface: #ffffff;
+  --ink: #1d1517;
+  --muted: #6d6164;
+  --line: #e4dadb;
+  --scarlet: #cc0033;
+  --scarlet-ink: #ffffff;
+  --sign-bg: #191314;
+  --sign-led: #ffb020;
+  --tier-common: #8a7f82;
+  --tier-uncommon: #1f8a7a;
+  --tier-rare: #6b4fd1;
+  --tier-deep: #cc0033;
+  --bar: #efe6e7;
+  --good: #1f8a4c;
+  --bad: #c2352b;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --led: "Silkscreen", "Courier New", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141011; --surface: #1e1719; --ink: #f4ecee; --muted: #a99da0; --line: #362b2e;
+    --scarlet: #ff3d62; --scarlet-ink: #1a0006; --sign-bg: #0b0809; --sign-led: #ffb84a;
+    --tier-common: #a59a9d; --tier-uncommon: #3cc4ae; --tier-rare: #a28cff; --tier-deep: #ff3d62;
+    --bar: #2b2224; --good: #4cc983; --bad: #ff6b5e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141011; --surface: #1e1719; --ink: #f4ecee; --muted: #a99da0; --line: #362b2e;
+  --scarlet: #ff3d62; --scarlet-ink: #1a0006; --sign-bg: #0b0809; --sign-led: #ffb84a;
+  --tier-common: #a59a9d; --tier-uncommon: #3cc4ae; --tier-rare: #a28cff; --tier-deep: #ff3d62;
+  --bar: #2b2224; --good: #4cc983; --bad: #ff6b5e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 560px; margin: 0 auto; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--scarlet); outline-offset: 2px; }
+
+/* Bus sign */
+.sign {
+  background: var(--sign-bg); border-radius: 10px; padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  box-shadow: inset 0 0 0 2px #2d2426;
+}
+.sign .route { font-family: var(--led); color: var(--sign-led); font-size: 26px; letter-spacing: .04em; line-height: 1;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--sign-led) 55%, transparent); }
+.sign .dest { font-family: var(--led); color: var(--sign-led); font-size: 13px; letter-spacing: .08em; opacity: .85; text-align: right; }
+.title { display: grid; gap: 6px; }
+.title h1 { font-size: clamp(30px, 8vw, 42px); font-weight: 800; letter-spacing: -.02em; line-height: 1.02; }
+.title h1 em { font-style: normal; color: var(--scarlet); }
+.title p { margin: 0; color: var(--muted); max-width: 52ch; }
+
+/* Stop tabs */
+.stops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stop {
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px;
+  padding: 8px 10px; text-align: left; display: grid; gap: 2px; min-width: 0;
+}
+.stop .n { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 600; }
+.stop .s { font-family: var(--display); font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+.stop[aria-selected="true"] { border-color: var(--scarlet); box-shadow: 0 0 0 1px var(--scarlet); }
+.stop.done .s { color: var(--scarlet); }
+
+/* Question card */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 14px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.prompt { font-size: clamp(22px, 5.6vw, 28px); font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
+.hint { color: var(--muted); font-size: 14px; margin: -6px 0 0; }
+form.guess { display: flex; gap: 8px; }
+form.guess input {
+  flex: 1; min-width: 0; font: inherit; font-size: 17px; padding: 12px 14px; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+}
+form.guess input:focus { border-color: var(--scarlet); outline: none; }
+.btn { background: var(--scarlet); color: var(--scarlet-ink); border: 0; border-radius: 10px; padding: 12px 18px; font-weight: 700; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.btn:disabled { opacity: .5; cursor: default; }
+.strikes { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.strike { width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid var(--line); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+.strike.used { background: var(--bad); border-color: var(--bad); color: #fff; }
+.msg { min-height: 1.5em; font-size: 15px; margin: 0; }
+.msg.bad { color: var(--bad); }
+
+/* Result */
+.result { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; padding: 14px; border-radius: 12px; background: var(--bg); }
+.result .pts { grid-row: span 2; font-family: var(--led); font-size: 34px; line-height: 1; color: var(--scarlet); font-variant-numeric: tabular-nums; }
+.result .ans { font-weight: 700; font-size: 18px; }
+.result .meta { font-size: 14px; color: var(--muted); }
+.tier { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; color: #fff; vertical-align: 2px; }
+.tier.common { background: var(--tier-common); } .tier.uncommon { background: var(--tier-uncommon); }
+.tier.rare { background: var(--tier-rare); } .tier.deep { background: var(--tier-deep); }
+
+.board { display: grid; gap: 6px; }
+.board h3 { font-size: 15px; font-family: var(--body); font-weight: 700; display: flex; justify-content: space-between; gap: 8px; }
+.board h3 span { color: var(--muted); font-weight: 500; }
+.row { position: relative; display: flex; justify-content: space-between; gap: 10px; padding: 6px 10px; border-radius: 7px; font-size: 14px; overflow: hidden; }
+.row .fill { position: absolute; inset: 0 auto 0 0; background: var(--bar); z-index: 0; border-radius: 7px; }
+.row > span { position: relative; z-index: 1; min-width: 0; }
+.row .pct { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.row.mine { box-shadow: inset 0 0 0 1.5px var(--scarlet); font-weight: 700; }
+.row.mine .pct { color: var(--scarlet); }
+.more { justify-self: start; background: none; border: 0; color: var(--scarlet); font-weight: 600; padding: 4px 0; }
+
+.next { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Summary */
+.summary { display: grid; gap: 12px; }
+.total { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.total .big { font-family: var(--led); font-size: 48px; color: var(--scarlet); line-height: 1; font-variant-numeric: tabular-nums; }
+.total .of { color: var(--muted); }
+.share-text { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; background: var(--bg); border-radius: 10px; padding: 12px; white-space: pre-wrap; user-select: all; margin: 0; overflow-x: auto; }
+
+.status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tier-common); flex: none; }
+.dot.live { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 25%, transparent); }
+
+details.how { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 20px; }
+details.how summary { cursor: pointer; font-weight: 700; padding: 12px 0; font-family: var(--display); font-size: 17px; }
+details.how div { padding-bottom: 14px; color: var(--ink); display: grid; gap: 10px; font-size: 15px; }
+details.how p { margin: 0; max-width: 62ch; }
+details.how code { font-size: 13px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.tiers { display: flex; flex-wrap: wrap; gap: 6px; }
+footer { font-size: 12px; color: var(--muted); text-align: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .row .fill { transition: width .6s ease; }
+  .result { animation: pop .35s ease; }
+  @keyframes pop { from { transform: scale(.97); } to { transform: none; } }
+}
+</style>
+
+<div class="wrap">
+  <div class="sign" aria-hidden="true">
+    <span class="route" id="signRoute">RU&nbsp;3</span>
+    <span class="dest" id="signDest">TODAY'S ROUTE<br>3 STOPS</span>
+  </div>
+
+  <header class="title">
+    <h1>RU <em>Deep Cuts</em></h1>
+    <p id="tagline">Three Rutgers–New Brunswick prompts a day. Name a correct answer. The fewer Knights who say it, the more points you get.</p>
+  </header>
+
+  <div class="stops" role="tablist" id="stops"></div>
+
+  <main id="stage"></main>
+
+  <p class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">Connecting to today's crowd…</span></p>
+
+  <details class="how" id="how">
+    <summary>How scoring works</summary>
+    <div>
+      <p><strong>One answer per prompt.</strong> Type any correct answer. A guess that isn't on the list costs a strike, and three strikes scores that prompt 0.</p>
+      <p><strong>Points come from rarity.</strong> Your answer's share is the percent of players who gave the same answer. Points = 15 × log₂(1 ÷ share), capped at 100. If 50% of players say it, you get 15. At 6% you get 61. At 1% or less you get the full 100.</p>
+      <p><strong>Where the percentages come from.</strong> Each answer starts with an estimate of how often a Rutgers student would say it. That estimate counts as 25 imaginary players. Every real player's answer is then added on top. Early in the day, the estimate does most of the work. After a few hundred players, the crowd decides almost everything. Scores update live, so the result is final at midnight Eastern.</p>
+      <div class="tiers">
+        <span class="tier common">Common · over 20%</span>
+        <span class="tier uncommon">Uncommon · 5–20%</span>
+        <span class="tier rare">Rare · 1–5%</span>
+        <span class="tier deep">Deep cut · under 1%</span>
+      </div>
+      <p><strong>New prompts every day.</strong> They change at midnight Eastern. Everyone gets the same three, picked from a reviewed question bank or from that day's scheduled set.</p>
+    </div>
+  </details>
+
+  <footer>A fan-made game for Rutgers–New Brunswick students. Not affiliated with Rutgers University.</footer>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- Question bank ----------
+   Each answer: [display name, baseline weight, ...aliases].
+   Weight = estimated relative share of Rutgers students who'd say it (only ratios matter). */
+const BANK = [
+  { id: "campus", prompt: "Name a Rutgers–New Brunswick campus.", hint: "There are five.", answers: [
+    ["College Avenue", 40, "college ave", "ca", "cac"], ["Busch", 26, "busch campus"], ["Livingston", 18, "livi", "livingston campus"],
+    ["Cook", 9, "cook campus", "g h cook"], ["Douglass", 7, "douglass campus", "doug"] ] },
+  { id: "bus", prompt: "Name a Rutgers–New Brunswick campus bus route.", hint: "Letters count. So do the expresses.", answers: [
+    ["A", 18, "a route", "a bus"], ["B", 16, "b route", "b bus"], ["LX", 20, "lx route", "lx bus"], ["EE", 14, "ee route", "ee bus"],
+    ["H", 11, "h route", "h bus"], ["F", 8, "f route", "f bus"], ["C", 5, "c route", "c bus"], ["REXB", 4, "rex b", "rexb route"],
+    ["REXL", 3, "rex l", "rexl route"], ["Weekend 1", 1, "weekend one", "w1"], ["Weekend 2", 1, "weekend two", "w2"] ] },
+  { id: "dining", prompt: "Name a Rutgers–New Brunswick dining hall.", hint: "Past and present halls both count.", answers: [
+    ["Busch Dining Hall", 28, "busch dining", "busch dining hall", "bdh"], ["Livingston Dining Commons", 26, "livingston dining", "livi dining", "ldc"],
+    ["Neilson Dining Hall", 18, "neilson", "neilson dining"], ["The Atrium", 16, "atrium"], ["Brower Commons", 12, "brower", "brower dining"] ] },
+  { id: "alumni", prompt: "Name a famous Rutgers alum.", hint: "Graduates or people who studied there.", answers: [
+    ["Paul Robeson", 24, "robeson"], ["James Gandolfini", 18, "gandolfini"], ["Milton Friedman", 10, "friedman"],
+    ["Selman Waksman", 6, "waksman"], ["Ray Rice", 7], ["Devin McCourty", 6], ["Jason McCourty", 4], ["Eric LeGrand", 6, "legrand"],
+    ["Mario Batali", 4, "batali"], ["Kenny Britt", 3], ["Ozzie Nelson", 2], ["Robert Pinsky", 2, "pinsky"],
+    ["Joyce Kilmer", 4, "kilmer"], ["Sebastian Stan", 4] ] },
+  { id: "library", prompt: "Name a Rutgers–New Brunswick library.", hint: "Current or former names both count.", answers: [
+    ["Alexander Library", 40, "alexander", "archibald s alexander library"], ["Library of Science and Medicine", 22, "lsm", "library of science & medicine"],
+    ["Carr Library", 14, "james dickson carr library", "kilmer library", "kilmer area library", "carr"],
+    ["Mabel Smith Douglass Library", 14, "douglass library", "mabel smith douglass"], ["Art Library", 5, "art lib"],
+    ["Performing Arts Library", 3, "music library"], ["East Asian Library", 2] ] },
+  { id: "sport", prompt: "Name a sport Rutgers plays at the varsity level.", hint: "Men's or women's.", answers: [
+    ["Football", 34], ["Basketball", 26, "mens basketball", "womens basketball", "hoops"], ["Wrestling", 9], ["Baseball", 6], ["Soccer", 5],
+    ["Lacrosse", 4, "lax"], ["Softball", 3], ["Field Hockey", 2], ["Volleyball", 3], ["Gymnastics", 2], ["Swimming and Diving", 1, "swimming", "diving", "swim"],
+    ["Track and Field", 2, "track"], ["Cross Country", 1, "xc"], ["Rowing", 1, "crew"], ["Tennis", 1], ["Golf", 1] ] },
+  { id: "bigten", prompt: "Name a Big Ten school other than Rutgers.", hint: "There are 17 others.", answers: [
+    ["Penn State", 20, "pennsylvania state", "psu", "penn st"], ["Michigan", 18, "university of michigan", "umich"], ["Ohio State", 18, "osu", "the ohio state university", "ohio st"],
+    ["Maryland", 7, "umd"], ["Michigan State", 5, "msu", "michigan st"], ["Wisconsin", 4], ["Iowa", 3], ["Indiana", 3], ["Purdue", 4], ["Illinois", 3, "uiuc"],
+    ["Northwestern", 3], ["Nebraska", 2], ["Minnesota", 2], ["UCLA", 3], ["USC", 3, "southern california"], ["Oregon", 1], ["Washington", 1, "uw"] ] },
+  { id: "school", prompt: "Name a school or college at Rutgers–New Brunswick.", hint: "As in \"School of …\".", answers: [
+    ["School of Arts and Sciences", 24, "sas", "arts and sciences"], ["School of Engineering", 20, "soe", "engineering"], ["Rutgers Business School", 18, "rbs", "business school"],
+    ["SEBS", 8, "school of environmental and biological sciences"], ["Mason Gross School of the Arts", 8, "mason gross", "mgsa"],
+    ["Ernest Mario School of Pharmacy", 6, "pharmacy", "school of pharmacy", "emsop"], ["School of Nursing", 4, "nursing"],
+    ["School of Communication and Information", 4, "sci", "sc&i", "comm and info"], ["Bloustein School", 3, "bloustein", "edward j bloustein school of planning and public policy"],
+    ["School of Management and Labor Relations", 2, "smlr"], ["Graduate School of Education", 1, "gse"], ["School of Social Work", 1, "social work"],
+    ["Robert Wood Johnson Medical School", 1, "rwjms", "rwj medical school"] ] },
+  { id: "landmark", prompt: "Name a Rutgers–New Brunswick building or landmark.", hint: "Anything with a name you'd give someone directions to.", answers: [
+    ["Old Queens", 12], ["SHI Stadium", 12, "shi", "rutgers stadium", "high point solutions stadium"], ["Jersey Mike's Arena", 9, "the rac", "rac", "rutgers athletic center", "jersey mikes arena"],
+    ["Voorhees Mall", 6], ["Scott Hall", 6], ["Hill Center", 6, "hill"], ["College Avenue Student Center", 6, "cac student center", "college ave student center"],
+    ["Busch Student Center", 5], ["Livingston Student Center", 5], ["Kirkpatrick Chapel", 4], ["Zimmerli Art Museum", 4, "zimmerli"],
+    ["Werblin Recreation Center", 4, "werblin"], ["Allison Road Classrooms", 4, "arc"], ["Rutgers Gardens", 3], ["Passion Puddle", 3],
+    ["Voorhees Chapel", 2], ["Geology Museum", 2], ["Tillett Hall", 2, "tillett"], ["Beck Hall", 2, "beck"], ["The Yard", 3, "the yard at college ave"] ] },
+  { id: "fat", prompt: "Name a famous Rutgers \"fat\" sandwich.", hint: "The kind loaded with fries and chicken fingers.", answers: [
+    ["Fat Darrell", 45, "fat darrel"], ["Fat Cat", 20], ["Fat Sam", 12], ["Fat Moose", 10], ["Fat Koko", 6] ] },
+  { id: "dorm", prompt: "Name a Rutgers–New Brunswick residence hall or apartment complex.", hint: "Any campus.", answers: [
+    ["Livingston Apartments", 10, "livi apartments", "livingston apts"], ["The Quads", 8, "livingston quads", "quads"], ["Demarest Hall", 5, "demarest"],
+    ["Frelinghuysen Hall", 6, "frelinghuysen", "frelly"], ["Hardenbergh Hall", 5, "hardenbergh"], ["Tinsley Hall", 3, "tinsley"],
+    ["Mettler Hall", 4, "mettler"], ["Clothier Hall", 3, "clothier"], ["Brett Hall", 3, "brett"], ["Hegeman Hall", 2, "hegeman"],
+    ["Silvers Apartments", 3, "silvers"], ["Mattia Hall", 2, "mattia"], ["Nichols Apartments", 2, "nichols"], ["Richardson Apartments", 2, "richardson"],
+    ["Barr Hall", 2, "barr"], ["Judson Hall", 2, "judson"], ["Allen Hall", 1, "allen"], ["Winkler Hall", 1, "winkler"], ["Rockoff Hall", 3, "rockoff"],
+    ["University Center at Easton Avenue", 2, "uc easton", "university center"], ["Katzenbach Hall", 2, "katzenbach"], ["Jameson Hall", 1, "jameson"],
+    ["Newell Apartments", 1, "newell"], ["Campbell Hall", 2, "campbell"], ["Stonier Hall", 1, "stonier"] ] },
+  { id: "streets", prompt: "Name a street in New Brunswick.", hint: "Routes count too.", answers: [
+    ["Easton Avenue", 26, "easton", "easton ave"], ["George Street", 22, "george st", "george"], ["College Avenue", 16, "college ave"],
+    ["Hamilton Street", 7, "hamilton st"], ["Somerset Street", 5, "somerset st"], ["Livingston Avenue", 4, "livingston ave"], ["Albany Street", 4, "albany st"],
+    ["Route 18", 5, "rt 18", "route eighteen"], ["Route 27", 3, "rt 27"], ["French Street", 2, "french st"], ["Neilson Street", 1, "neilson st"],
+    ["Church Street", 2, "church st"], ["Bayard Street", 1, "bayard st"], ["Paterson Street", 1, "paterson st"], ["Remsen Avenue", 1, "remsen ave"],
+    ["Commercial Avenue", 1, "commercial ave"], ["Joyce Kilmer Avenue", 1, "joyce kilmer ave"], ["Mine Street", 1, "mine st"], ["Bartlett Street", 1, "bartlett st"],
+    ["Union Street", 1, "union st"], ["Senior Street", 1, "senior st"], ["Morrell Street", 1, "morrell st"], ["Sicard Street", 1, "sicard st"], ["Handy Street", 1, "handy st"] ] },
+  { id: "major", prompt: "Name a major you can study at Rutgers–New Brunswick.", hint: "Common names are fine.", answers: [
+    ["Computer Science", 20, "cs", "comp sci"], ["Biological Sciences", 10, "biology", "bio"], ["Psychology", 8, "psych"], ["Economics", 6, "econ"],
+    ["Finance", 6], ["Nursing", 3], ["Pharmacy", 3], ["Mechanical Engineering", 3, "mechanical", "mech e"], ["Electrical and Computer Engineering", 3, "ece", "electrical engineering", "computer engineering"],
+    ["Biomedical Engineering", 3, "bme"], ["Accounting", 3], ["Information Technology and Informatics", 3, "iti"], ["Political Science", 3, "poli sci"],
+    ["Cell Biology and Neuroscience", 3, "cbn", "neuroscience"], ["Mathematics", 2, "math"], ["Data Science", 2], ["Marketing", 2], ["Supply Chain Management", 2, "supply chain"],
+    ["Business Analytics and Information Technology", 2, "bait"], ["Public Health", 2], ["Exercise Science", 2], ["English", 1], ["History", 1], ["Chemistry", 1, "chem"],
+    ["Physics", 1], ["Statistics", 1, "stats"], ["Criminal Justice", 1], ["Communication", 1, "comm"], ["Journalism and Media Studies", 1, "journalism"],
+    ["Sociology", 1], ["Philosophy", 1], ["Linguistics", 1], ["Cognitive Science", 1, "cog sci"], ["Biochemistry", 1], ["Genetics", 1], ["Civil Engineering", 1],
+    ["Chemical Engineering", 1], ["Industrial Engineering", 1], ["Aerospace Engineering", 1], ["Environmental Sciences", 1], ["Food Science", 1], ["Animal Science", 1],
+    ["Marine Sciences", 1], ["Anthropology", 1], ["Geography", 1], ["Art History", 1], ["Music", 1], ["Theater Arts", 1, "theater", "theatre"], ["Dance", 1],
+    ["Visual Arts", 1], ["Labor and Employment Relations", 1, "labor studies"], ["Africana Studies", 1], ["Spanish", 1], ["Astrophysics", 1],
+    ["Women's and Gender Studies", 1, "gender studies"], ["Planning and Public Policy", 1, "public policy"] ] },
+  { id: "nec", prompt: "Name a station on NJ Transit's Northeast Corridor Line.", hint: "Trenton to New York.", answers: [
+    ["New Brunswick", 28], ["New York Penn Station", 16, "penn station", "ny penn", "new york penn"], ["Newark Penn Station", 12, "newark penn", "newark"],
+    ["Secaucus Junction", 8, "secaucus"], ["Princeton Junction", 7], ["Trenton", 7, "trenton transit center"], ["Metropark", 5], ["Edison", 4],
+    ["Metuchen", 4], ["Newark Airport", 3], ["Elizabeth", 2], ["Rahway", 2], ["Jersey Avenue", 2, "jersey ave"], ["Linden", 1], ["Hamilton", 1], ["North Elizabeth", 1] ] },
+  { id: "county", prompt: "Name a New Jersey county.", hint: "There are 21.", answers: [
+    ["Middlesex", 22], ["Bergen", 14], ["Monmouth", 9], ["Essex", 7], ["Morris", 6], ["Hudson", 6], ["Somerset", 5], ["Union", 5], ["Ocean", 5],
+    ["Mercer", 4], ["Camden", 3], ["Passaic", 3], ["Burlington", 2], ["Hunterdon", 2], ["Atlantic", 2], ["Cape May", 2], ["Gloucester", 1],
+    ["Sussex", 1], ["Warren", 1], ["Cumberland", 1], ["Salem", 1] ] },
+  { id: "njfood", prompt: "Name a food New Jersey is known for.", hint: "Diner orders count.", answers: [
+    ["Pork Roll", 22, "taylor ham", "pork roll egg and cheese", "taylor ham egg and cheese"], ["Bagels", 12, "bagel"], ["Pizza", 10, "jersey pizza"],
+    ["Disco Fries", 9], ["Saltwater Taffy", 6, "taffy"], ["Jersey Tomatoes", 6, "tomatoes"], ["Italian Hot Dog", 3], ["Tomato Pie", 3],
+    ["Sub", 6, "hoagie", "subs", "jersey mikes sub"], ["Blueberries", 3], ["Cranberries", 2], ["Sloppy Joe", 2, "nj sloppy joe"],
+    ["Boardwalk Fries", 2], ["Frozen Custard", 1, "custard"], ["Crumb Cake", 1], ["Ripper", 1, "ripper hot dog", "rippers"], ["Cheesesteak", 2] ] },
+  { id: "venue", prompt: "Name a place where a Rutgers team plays home games.", hint: "Any sport.", answers: [
+    ["SHI Stadium", 38, "shi", "rutgers stadium", "high point solutions stadium"], ["Jersey Mike's Arena", 30, "the rac", "rac", "rutgers athletic center", "jersey mikes arena"],
+    ["College Avenue Gym", 8, "the barn", "college ave gym"], ["Bainton Field", 6, "bainton"], ["Yurcak Field", 6, "yurcak"], ["Rutgers Golf Course", 2],
+    ["Rutgers Softball Complex", 2, "softball complex"] ] },
+  { id: "njcollege", prompt: "Name a New Jersey college or university other than Rutgers.", hint: "Public or private.", answers: [
+    ["Princeton", 24, "princeton university"], ["NJIT", 12, "new jersey institute of technology"], ["Montclair State", 9, "montclair", "msu"],
+    ["Rowan", 8, "rowan university"], ["TCNJ", 7, "the college of new jersey"], ["Seton Hall", 7], ["Stevens Institute of Technology", 6, "stevens"],
+    ["Kean", 4, "kean university"], ["Ramapo", 3, "ramapo college"], ["Stockton", 3, "stockton university"], ["William Paterson", 3, "wpu", "william paterson university"],
+    ["Monmouth University", 3, "monmouth"], ["Rider", 2, "rider university"], ["Fairleigh Dickinson", 2, "fdu"], ["Drew University", 1, "drew"],
+    ["Saint Peter's University", 1, "st peters", "saint peters"], ["Caldwell University", 1, "caldwell"], ["Georgian Court", 1], ["NJCU", 1, "new jersey city university"] ] },
+  { id: "cs", prompt: "Name a Rutgers Computer Science course.", hint: "Number or name, e.g. \"CS 112\" or \"Data Structures\".", answers: [
+    ["CS 111 Intro to Computer Science", 22, "111", "cs111", "intro to cs", "introduction to computer science", "intro to computer science"],
+    ["CS 112 Data Structures", 24, "112", "cs112", "data structures"], ["CS 211 Computer Architecture", 12, "211", "cs211", "computer architecture", "comp arch"],
+    ["CS 205 Discrete Structures I", 10, "205", "cs205", "discrete 1", "discrete structures 1", "discrete"], ["CS 206 Discrete Structures II", 6, "206", "cs206", "discrete 2", "discrete structures 2"],
+    ["CS 214 Systems Programming", 9, "214", "cs214", "systems programming"], ["CS 213 Software Methodology", 6, "213", "cs213", "software methodology"],
+    ["CS 344 Design and Analysis of Algorithms", 5, "344", "cs344", "algorithms", "algos"], ["CS 336 Principles of Information and Data Management", 3, "336", "cs336", "databases", "data management"],
+    ["CS 416 Operating Systems Design", 2, "416", "cs416", "operating systems", "os"], ["CS 440 Introduction to Artificial Intelligence", 1, "440", "cs440", "artificial intelligence", "ai"] ] },
+  { id: "shore", prompt: "Name a Jersey Shore town.", hint: "Down the shore, anywhere from Sandy Hook to Cape May.", answers: [
+    ["Seaside Heights", 18, "seaside"], ["Point Pleasant Beach", 12, "point pleasant", "point pleasant beach"], ["Asbury Park", 11, "asbury"], ["Belmar", 10],
+    ["Wildwood", 9, "the wildwoods", "north wildwood"], ["Ocean City", 7, "oc"], ["Cape May", 6], ["Long Branch", 5], ["Atlantic City", 6, "ac"],
+    ["Long Beach Island", 5, "lbi", "beach haven", "ship bottom"], ["Manasquan", 3], ["Sea Isle City", 2, "sea isle"], ["Avalon", 1], ["Stone Harbor", 1],
+    ["Spring Lake", 1], ["Sea Girt", 1], ["Bradley Beach", 1], ["Brigantine", 1], ["Margate", 1], ["Ventnor", 1], ["Lavallette", 1], ["Ocean Grove", 1],
+    ["Sea Bright", 1], ["Bay Head", 1], ["Keansburg", 1], ["Avon-by-the-Sea", 1, "avon"] ] },
+  { id: "njpro", prompt: "Name a pro sports team that plays its home games in New Jersey.", hint: "Major and minor leagues.", answers: [
+    ["New York Giants", 30, "giants"], ["New York Jets", 24, "jets"], ["New Jersey Devils", 26, "devils"], ["New York Red Bulls", 8, "red bulls"],
+    ["Gotham FC", 4, "nj ny gotham fc", "gotham"], ["Somerset Patriots", 4, "patriots"], ["Jersey Shore BlueClaws", 2, "blueclaws", "blue claws"],
+    ["Trenton Thunder", 1, "thunder"], ["New Jersey Jackals", 1, "jackals"] ] },
+];
+
+/* ---------- Helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const PRIOR_N = 25;            // the baseline counts as this many imaginary players
+const STRIKES = 3;
+const TZ = "America/New_York";
+const todayKey = () => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+const dayNumber = (key) => Math.round((Date.parse(key + "T00:00:00Z") - Date.parse("2026-01-01T00:00:00Z")) / 864e5);
+
+function mulberry32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function shuffled(arr, seed) { const r = mulberry32(seed), a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// Everyone gets the same 3 for a date: shuffle the bank once per "cycle", hand out 3 per day.
+function bankQuestionsFor(key) {
+  const perCycle = Math.floor(BANK.length / 3);
+  const d = Math.max(0, dayNumber(key));
+  const cycle = Math.floor(d / perCycle), slot = d % perCycle;
+  return shuffled(BANK, 1869 + cycle).slice(slot * 3, slot * 3 + 3);
+}
+
+function norm(s) {
+  return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/&/g, " and ").replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim()
+    .replace(/^the /, "").replace(/\b(street|st)\b/g, "st").replace(/\b(avenue|ave)\b/g, "ave");
+}
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const m = a.length, n = b.length; let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+  return prev[n];
+}
+function prepare(q) {
+  const answers = q.answers.filter((a) => a[1] > 0).map(([name, w, ...aliases]) => {
+    const keys = [...new Set([name, ...aliases].map(norm))];
+    return { name, w: Math.max(w, 0.5), keys, squashed: keys.map((k) => k.replace(/ /g, "")) };
+  });
+  const total = answers.reduce((s, a) => s + a.w, 0);
+  answers.forEach((a) => (a.prior = a.w / total));
+  return { ...q, answers };
+}
+function match(q, raw) {
+  const g = norm(raw); if (!g) return null;
+  const sq = g.replace(/ /g, "");
+  for (const a of q.answers) if (a.keys.includes(g) || a.squashed.includes(sq)) return a;
+  let best = null, bestD = 9;
+  for (const a of q.answers) for (const k of a.squashed) {
+    if (k.length < 5 || sq.length < 5) continue;
+    const allow = k.length >= 8 ? 2 : 1, d = lev(sq, k);
+    if (d <= allow && d < bestD) { best = a; bestD = d; }
+  }
+  return best;
+}
+const share = (a, counts, n) => (PRIOR_N * a.prior + (counts[a.name] || 0)) / (PRIOR_N + n);
+const points = (p) => Math.min(100, Math.max(1, Math.round(15 * Math.log2(1 / p))));
+const tierOf = (p) => p > 0.2 ? ["common", "Common"] : p > 0.05 ? ["uncommon", "Uncommon"] : p > 0.01 ? ["rare", "Rare"] : ["deep", "Deep cut"];
+const pct = (p) => p >= 0.1 ? Math.round(p * 100) + "%" : p >= 0.01 ? (p * 100).toFixed(1) + "%" : "<1%";
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- State ---------- */
+let DATE = todayKey();
+let questions = bankQuestionsFor(DATE).map(prepare);
+let current = 0;
+let showAll = {};
+let me = blankDay();
+let crowd = questions.map(() => ({ counts: {}, n: 0 }));
+let players = 0;
+let db = null, uid = null, canWrite = false, writing = Promise.resolve();
+let myDoc = null; // full plays/<uid> body
+let lastMsg = "";
+
+function blankDay() { return { answers: [null, null, null], strikes: [0, 0, 0], updatedAt: 0 }; }
+const LS = "rudeepcuts:" ;
+function loadLocal() { try { const v = JSON.parse(localStorage.getItem(LS + DATE) || "null"); if (v && Array.isArray(v.answers)) return v; } catch {} return null; }
+function saveLocal() { try { localStorage.setItem(LS + DATE, JSON.stringify(me)); } catch {} }
+const isDone = (i) => me.answers[i] !== null || me.strikes[i] >= STRIKES;
+
+/* ---------- Rendering ---------- */
+function qScore(i) {
+  const q = questions[i], name = me.answers[i];
+  if (!name) return 0;
+  const a = q.answers.find((x) => x.name === name); if (!a) return 0;
+  const c = crowd[i]; return points(share(a, c.counts, c.n));
+}
+function renderStops() {
+  const el = $("#stops"); el.innerHTML = "";
+  questions.forEach((q, i) => {
+    const b = document.createElement("button");
+    b.className = "stop" + (isDone(i) ? " done" : ""); b.setAttribute("role", "tab"); b.id = "stop-" + i;
+    b.setAttribute("aria-selected", String(i === current));
+    b.innerHTML = `<span class="n">Stop ${i + 1}</span><span class="s">${isDone(i) ? qScore(i) + " pts" : "—"}</span>`;
+    b.onclick = () => { current = i; lastMsg = ""; render(); };
+    el.appendChild(b);
+  });
+}
+function boardHTML(i) {
+  const q = questions[i], c = crowd[i];
+  const rows = q.answers.map((a) => ({ a, p: share(a, c.counts, c.n) })).sort((x, y) => y.p - x.p);
+  const mine = me.answers[i];
+  const limit = showAll[i] ? rows.length : Math.min(rows.length, 8);
+  let list = rows.slice(0, limit);
+  if (mine && !list.some((r) => r.a.name === mine)) list.push(rows.find((r) => r.a.name === mine));
+  const max = rows[0].p;
+  const html = list.map((r) => `<div class="row${r.a.name === mine ? " mine" : ""}"><span class="fill" style="width:${Math.max(2, (r.p / max) * 100)}%"></span><span>${esc(r.a.name)}</span><span class="pct">${pct(r.p)} · ${points(r.p)} pts</span></div>`).join("");
+  const more = rows.length > 8 ? `<button class="more" type="button" id="more-${i}">${showAll[i] ? "Show fewer" : `Show all ${rows.length} answers`}</button>` : "";
+  return `<div class="board"><h3>What Knights said <span>${c.n} ${c.n === 1 ? "player" : "players"} so far</span></h3>${html}${more}</div>`;
+}
+function renderStage() {
+  const i = current, q = questions[i], stage = $("#stage");
+  const allDone = questions.every((_, k) => isDone(k));
+  let body = `<section class="card" aria-labelledby="prompt-${i}"><span class="eyebrow">Stop ${i + 1} of 3</span><h2 class="prompt" id="prompt-${i}">${esc(q.prompt)}</h2>`;
+  if (q.hint) body += `<p class="hint">${esc(q.hint)}</p>`;
+  if (!isDone(i)) {
+    body += `<form class="guess" id="guessForm" autocomplete="off"><input id="guessInput" name="guess" maxlength="80" placeholder="Your answer" aria-label="Your answer" enterkeyhint="go"><button class="btn" type="submit">Lock in</button></form>`;
+    body += `<div class="strikes" aria-label="Strikes">${Array.from({ length: STRIKES }, (_, k) => `<span class="strike${k < me.strikes[i] ? " used" : ""}">${k < me.strikes[i] ? "✕" : ""}</span>`).join("")}<span>${STRIKES - me.strikes[i]} ${STRIKES - me.strikes[i] === 1 ? "strike" : "strikes"} left</span></div>`;
+    body += `<p class="msg bad" id="msg" aria-live="polite">${esc(lastMsg)}</p>`;
+    body += `<p class="hint" style="margin:0">Think rarer. A correct answer only a few people give is worth up to 100.</p>`;
+  } else {
+    const name = me.answers[i];
+    if (name) {
+      const a = q.answers.find((x) => x.name === name), c = crowd[i], p = share(a, c.counts, c.n), [tc, tl] = tierOf(p);
+      body += `<div class="result"><span class="pts">${points(p)}</span><span class="ans">${esc(name)} <span class="tier ${tc}">${tl}</span></span><span class="meta">${pct(p)} of players said this. Score updates live until midnight.</span></div>`;
+    } else {
+      body += `<div class="result"><span class="pts">0</span><span class="ans">Out of strikes</span><span class="meta">Three guesses weren't on the list. See what counted below.</span></div>`;
+    }
+    body += boardHTML(i);
+    const nextI = questions.findIndex((_, k) => !isDone(k));
+    body += `<div class="next">${nextI >= 0 ? `<button class="btn" type="button" id="goNext">Next stop →</button>` : ""}</div>`;
+  }
+  body += `</section>`;
+  if (allDone) body += summaryHTML();
+  stage.innerHTML = body;
+
+  const f = $("#guessForm");
+  if (f) { f.onsubmit = (e) => { e.preventDefault(); guess($("#guessInput").value); }; setTimeout(() => $("#guessInput")?.focus({ preventScroll: true }), 0); }
+  const more = $("#more-" + i); if (more) more.onclick = () => { showAll[i] = !showAll[i]; renderStage(); };
+  const nx = $("#goNext"); if (nx) nx.onclick = () => { current = questions.findIndex((_, k) => !isDone(k)); lastMsg = ""; render(); };
+  const cp = $("#copyBtn"); if (cp) cp.onclick = copyShare;
+}
+function shareText() {
+  const total = questions.reduce((s, _, i) => s + qScore(i), 0);
+  const squares = questions.map((q, i) => {
+    if (!me.answers[i]) return "⬛";
+    const a = q.answers.find((x) => x.name === me.answers[i]), c = crowd[i], t = tierOf(share(a, c.counts, c.n))[0];
+    return { common: "⬜", uncommon: "🟩", rare: "🟪", deep: "🟥" }[t];
+  }).join("");
+  const [y, m, d] = DATE.split("-");
+  return `RU Deep Cuts ${+m}/${+d}/${y.slice(2)}\n${squares} ${total}/300`;
+}
+function summaryHTML() {
+  const total = questions.reduce((s, _, i) => s + qScore(i), 0);
+  return `<section class="card summary" aria-label="Today's total"><span class="eyebrow">End of the line</span>
+    <div class="total"><span class="big">${total}</span><span class="of">of 300 today</span></div>
+    <pre class="share-text" id="shareText">${esc(shareText())}</pre>
+    <div class="next"><button class="btn" type="button" id="copyBtn">Copy result</button></div>
+    <p class="hint" style="margin:0" id="copyMsg">New stops at midnight Eastern.</p></section>`;
+}
+function copyShare() {
+  const t = shareText(), msg = $("#copyMsg");
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents($("#shareText")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); msg.textContent = "Selected. Press Ctrl+C or ⌘C to copy."; };
+  try { navigator.clipboard.writeText(t).then(() => (msg.textContent = "Copied. Paste it in the group chat."), fallback); } catch { fallback(); }
+}
+function renderSign() {
+  const done = questions.filter((_, i) => isDone(i)).length;
+  const [, m, d] = DATE.split("-");
+  $("#signRoute").textContent = `RU ${3 - done}`;
+  $("#signDest").innerHTML = `${+m}/${+d} ROUTE<br>${done === 3 ? "LAST STOP" : `${3 - done} STOP${3 - done === 1 ? "" : "S"} LEFT`}`;
+}
+function renderStatus(text, live) { $("#statusText").textContent = text; $("#dot").className = "dot" + (live ? " live" : ""); }
+function render() { renderSign(); renderStops(); renderStage(); }
+
+/* ---------- Play ---------- */
+function guess(raw) {
+  const i = current, q = questions[i];
+  if (isDone(i) || !raw.trim()) return;
+  const a = match(q, raw);
+  if (a) { me.answers[i] = a.name; lastMsg = ""; }
+  else { me.strikes[i]++; lastMsg = me.strikes[i] >= STRIKES ? "" : `"${raw.trim()}" isn't on our list. Try another.`; }
+  me.updatedAt = Date.now();
+  saveLocal(); persist(); render();
+}
+
+/* ---------- Live crowd (db) ---------- */
+function recount(docs) {
+  const next = questions.map(() => ({ counts: {}, n: 0 }));
+  let n = 0;
+  for (const d of docs) {
+    const body = d.data(); const day = body && body.days && body.days[DATE];
+    if (!day || !Array.isArray(day.answers)) continue;
+    let played = false;
+    day.answers.forEach((name, i) => {
+      if (i > 2 || typeof name !== "string") return;
+      if (!questions[i].answers.some((a) => a.name === name)) return;
+      next[i].counts[name] = (next[i].counts[name] || 0) + 1; next[i].n++; played = true;
+    });
+    if (played) n++;
+  }
+  // Answers stored in this viewer's own doc may not be in the snapshot yet; include local state.
+  if (uid && !docs.some((d) => d.id === uid)) me.answers.forEach((name, i) => { if (name) { next[i].counts[name] = (next[i].counts[name] || 0) + 1; next[i].n++; } });
+  crowd = next; players = n;
+}
+function persist() {
+  if (!db || !uid || !canWrite) return;
+  const days = Object.assign({}, (myDoc && myDoc.days) || {});
+  days[DATE] = { answers: me.answers.slice(), strikes: me.strikes.slice(), updatedAt: me.updatedAt };
+  const keys = Object.keys(days).sort(); while (keys.length > 14) delete days[keys.shift()]; // keep two weeks
+  myDoc = { days };
+  const body = { days };
+  writing = writing.then(() => db.doc("plays/" + uid).set(body)).catch((e) => {
+    if (e && e.code === "invalid_argument") { canWrite = false; renderStatus("Playing solo. Your answers aren't added to the crowd on this account, but you can still play.", false); }
+  });
+}
+
+async function loadSchedule() {
+  // A scheduled set for today overrides the bank (owner/editors write schedule/<date>).
+  try {
+    const snap = await db.doc("schedule/" + DATE).get();
+    const v = snap.exists && snap.data();
+    if (v && Array.isArray(v.questions) && v.questions.length === 3 && v.questions.every((q) => q && q.prompt && Array.isArray(q.answers) && q.answers.length)) {
+      questions = v.questions.map((q, k) => prepare({ id: q.id || "sched" + k, prompt: String(q.prompt), hint: q.hint ? String(q.hint) : "", answers: q.answers.filter((a) => Array.isArray(a) && typeof a[0] === "string").map((a) => [a[0], Number(a[1]) || 1, ...a.slice(2).map(String)]) }));
+      crowd = questions.map(() => ({ counts: {}, n: 0 }));
+    }
+  } catch {}
+}
+
+async function connect() {
+  const c = window.claude;
+  if (!c || typeof c.use !== "function") { renderStatus("Offline copy: scores use the baseline estimates only.", false); return; }
+  const [dbNs, user] = await Promise.all([c.use("db"), c.use("user")]);
+  if (!dbNs) { renderStatus("Live crowd unavailable here. Sign in to claude.ai to see live percentages. Scores use baseline estimates for now.", false); return; }
+  db = dbNs;
+  await loadSchedule();
+  try { uid = user ? await user.id() : null; } catch { uid = null; }
+  let w = null; try { w = user ? await user.can("data.write") : null; } catch {}
+  canWrite = !!uid && w !== false;
+  if (uid) {
+    try { const s = await db.doc("plays/" + uid).get(); if (s.exists) { myDoc = s.data(); const d = myDoc.days && myDoc.days[DATE]; if (d && Array.isArray(d.answers)) me = { answers: d.answers.slice(0, 3), strikes: (d.strikes || [0, 0, 0]).slice(0, 3), updatedAt: d.updatedAt || 0 }; } } catch {}
+    if (me.answers.some(Boolean) || me.strikes.some(Boolean)) { saveLocal(); persist(); }
+  }
+  current = Math.max(0, questions.findIndex((_, k) => !isDone(k))); if (questions.every((_, k) => isDone(k))) current = 0;
+  render();
+
+  const timer = setTimeout(() => renderStatus("Still reaching today's crowd. Percentages may be out of date.", false), 10000);
+  db.collection("plays").onSnapshot((snap) => {
+    if (!snap.metadata.fromCache) clearTimeout(timer);
+    recount(snap.docs);
+    const solo = canWrite ? "" : " You're playing solo, so your answers aren't counted.";
+    renderStatus(`Live: ${players} ${players === 1 ? "Knight has" : "Knights have"} played today.${solo}`, true);
+    render();
+  }, () => { clearTimeout(timer); renderStatus("Lost the live crowd. Scores use the last numbers we saw.", false); });
+}
+
+// Roll over at midnight Eastern if the tab stays open.
+setInterval(() => { if (todayKey() !== DATE) location.reload(); }, 60000);
+
+const saved = loadLocal(); if (saved) me = saved;
+current = Math.max(0, questions.findIndex((_, k) => !isDone(k)));
+render();
+connect();
+})();
+</script>
