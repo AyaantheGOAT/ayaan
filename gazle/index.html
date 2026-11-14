@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<!-- GAZLE:BODY-START -->
+<title>Gazle</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one centered play column, like a daily-puzzle card. Header, then a single "stage" that swaps between start / question / results. */
+:root {
+  --bg: #e9ece4;          /* limestone, faint olive bias */
+  --surface: #f6f7f2;
+  --ink: #18201d;
+  --muted: #5d6862;
+  --line: #cdd3c8;
+  --accent: #2c6650;      /* olive-cedar green */
+  --accent-ink: #f4f7f1;
+  --gold: #b9862a;        /* timer / speed */
+  --good: #2f7d4f;
+  --good-bg: #d8ecdd;
+  --bad: #a83a32;
+  --bad-bg: #f3dcd8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1a211d; --ink: #e6ebe4; --muted: #95a29a; --line: #2d3832;
+    --accent: #6fbf9a; --accent-ink: #0d1411; --gold: #e0b04f;
+    --good: #6fcf8f; --good-bg: #1d3626; --bad: #ef8a80; --bad-bg: #3d2220;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1a211d; --ink: #e6ebe4; --muted: #95a29a; --line: #2d3832;
+  --accent: #6fbf9a; --accent-ink: #0d1411; --gold: #e0b04f;
+  --good: #6fcf8f; --good-bg: #1d3626; --bad: #ef8a80; --bad-bg: #3d2220;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.logo { font-family: var(--font-display); font-weight: 800; font-size: 2.2rem; letter-spacing: -0.03em; line-height: 1; margin: 0; }
+.logo span { color: var(--accent); }
+.daynum { font-family: var(--font-mono); font-size: .8rem; color: var(--muted); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font-family: var(--font-mono); font-size: .75rem; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chip b { color: var(--ink); font-weight: 700; }
+
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+@media (max-width: 440px) { .stage { padding: 18px; } }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.55rem; line-height: 1.2; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.label { font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+
+.btn { font: 600 1rem var(--font-body); border-radius: 10px; padding: 13px 18px; cursor: pointer; border: 1px solid transparent; transition: transform .08s, background .15s; }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible, .opt:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn-ghost:hover { border-color: var(--muted); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row .btn { flex: 1 1 160px; }
+
+/* rules list */
+.rules { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 0; padding: 0; }
+.rules dt { font-family: var(--font-mono); font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rules dd { margin: 0; }
+
+/* progress pips */
+.progress { display: flex; gap: 6px; }
+.pip { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+.pip.cur { background: var(--ink); }
+.pip.g { background: var(--good); }
+.pip.y { background: var(--gold); }
+.pip.r { background: var(--bad); }
+
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.era { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.livepts { font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; color: var(--gold); }
+.timer { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.timer > i { display: block; height: 100%; width: 100%; background: var(--gold); transform-origin: left; }
+
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 520px) { .opts { grid-template-columns: 1fr; } }
+.opt { text-align: left; font: 500 1rem var(--font-body); color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 14px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; min-width: 0; transition: border-color .12s, background .12s; }
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt .k { font-family: var(--font-mono); font-size: .8rem; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; flex: none; margin-top: 2px; }
+.opt:disabled { cursor: default; }
+.opt.correct { background: var(--good-bg); border-color: var(--good); }
+.opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+.opt.dim { opacity: .55; }
+
+.feedback { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.verdict { font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; }
+.verdict.good { color: var(--good); }
+.verdict.bad { color: var(--bad); }
+
+/* results */
+.big { font-family: var(--font-display); font-weight: 800; font-size: 3.4rem; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.big small { font-size: 1rem; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.breakdown { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.bd { display: grid; grid-template-columns: 22px 1fr auto auto; gap: 10px; padding: 10px 12px; align-items: baseline; border-top: 1px solid var(--line); font-size: .9rem; }
+.bd:first-child { border-top: 0; }
+.bd .q { min-width: 0; }
+.bd .t, .bd .p { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: .82rem; }
+.bd .t { color: var(--muted); }
+.bd .p { font-weight: 700; min-width: 3.2em; text-align: right; }
+.dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 440px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-family: var(--font-mono); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.countdown { font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.toast { font-size: .85rem; color: var(--good); min-height: 1.3em; }
+.share-fallback { width: 100%; font-family: var(--font-mono); font-size: .85rem; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); resize: none; }
+footer { font-size: .78rem; color: var(--muted); text-align: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1 class="logo">Gaz<span>le</span></h1>
+      <span class="daynum" id="daynum"></span>
+    </div>
+    <div class="chips">
+      <span class="chip">Streak <b id="c-streak">0</b></span>
+      <span class="chip">Best daily <b id="c-best">0</b></span>
+      <span class="chip">Practice best <b id="c-pbest">0</b></span>
+    </div>
+  </header>
+  <main class="stage" id="stage" aria-live="polite"></main>
+  <footer>Questions cover the land's history from antiquity to today, from both Israeli and Palestinian perspectives. Keys 1–4 answer, Enter continues.</footer>
+</div>
+
+<script>
+(function () {
+"use strict";
+
+/* ---------- Question bank ----------
+   Format: [era, question, correct, wrong, wrong, wrong, fact]                */
+const BANK = [
+  ["Antiquity","In what year did the Roman army destroy the Second Temple in Jerusalem?","70 CE","4 BCE","135 CE","312 CE","Titus's legions sacked Jerusalem in 70 CE, ending the First Jewish–Roman War. The Western Wall is a remnant of the Temple Mount's retaining walls."],
+  ["Antiquity","After the Bar Kokhba revolt (132–136 CE), Rome renamed the province of Judea to what?","Syria Palaestina","Aelia Capitolina","Coele-Syria","Idumea","Emperor Hadrian merged Judea into 'Syria Palaestina'; Aelia Capitolina was the new name he gave the city of Jerusalem itself."],
+  ["Medieval","Which caliph accepted the surrender of Jerusalem around 637–638 CE?","Umar ibn al-Khattab","Abd al-Malik","Harun al-Rashid","Ali ibn Abi Talib","Caliph Umar took the city from the Byzantines. The Dome of the Rock was built later, by Umayyad caliph Abd al-Malik (completed c. 691)."],
+  ["Medieval","Who retook Jerusalem from the Crusaders in 1187?","Saladin","Baibars","Suleiman the Magnificent","Nur ad-Din","Saladin defeated the Crusader army at Hattin and entered Jerusalem in October 1187, 88 years after the First Crusade captured it in 1099."],
+  ["Ottoman era","In what year did the Ottoman Empire conquer the region, beginning four centuries of rule?","1516–17","1099","1291","1798","Selim I defeated the Mamluks in 1516–17. Ottoman rule lasted until British forces took the region in 1917–18."],
+  ["Ottoman era","Which Ottoman sultan built the walls that still surround Jerusalem's Old City?","Suleiman the Magnificent","Mehmed II","Selim I","Abdul Hamid II","Suleiman's walls were built in 1535–1542 and are today a UNESCO World Heritage site."],
+  ["Zionism","Who wrote 'Der Judenstaat' (The Jewish State) in 1896?","Theodor Herzl","Chaim Weizmann","Ahad Ha'am","Leon Pinsker","Herzl, a Viennese journalist, argued for a Jewish state as the answer to European antisemitism and went on to found the Zionist Organization."],
+  ["Zionism","Where was the First Zionist Congress held in 1897?","Basel","Vienna","London","Paris","The Basel Program called for 'a home for the Jewish people in Palestine secured under public law'."],
+  ["Zionism","In Hebrew, what is the term for Jewish immigration to the Land of Israel?","Aliyah","Galut","Tikkun","Yishuv","Aliyah means 'ascent'. 'Yishuv' refers to the Jewish community living in the land before 1948; 'Galut' means exile."],
+  ["Zionism","Degania, founded in 1910 near the Sea of Galilee, is known as the first what?","Kibbutz","Moshav","Yeshiva","Hebrew university","A kibbutz is a collective community. Degania Alef is often called 'the mother of the kibbutzim'."],
+  ["Zionism","Tel Aviv was founded in 1909 on the outskirts of which older port city?","Jaffa","Haifa","Acre","Ashkelon","Tel Aviv began as a Jewish garden suburb on dunes north of Jaffa. The two cities merged in 1950 as Tel Aviv–Yafo."],
+  ["World War I","The 1916 Sykes–Picot Agreement secretly divided Ottoman lands between Britain and which country?","France","Russia","Italy","Greece","The secret deal (with Russian assent) split the Levant into British and French spheres. It became public in 1917 when the Bolsheviks published it."],
+  ["World War I","The Balfour Declaration of 1917 was a letter addressed to whom?","Lord Walter Rothschild","Chaim Weizmann","Theodor Herzl","Sharif Hussein of Mecca","British Foreign Secretary Arthur Balfour backed 'a national home for the Jewish people' in Palestine, adding that nothing should prejudice the civil and religious rights of existing non-Jewish communities."],
+  ["World War I","Which year was the Balfour Declaration issued?","1917","1897","1922","1939","It was dated 2 November 1917, weeks before British troops entered Jerusalem."],
+  ["World War I","Which British general entered Jerusalem on foot in December 1917?","Edmund Allenby","T. E. Lawrence","Herbert Kitchener","Douglas Haig","Allenby dismounted and walked through the Jaffa Gate as a sign of respect for the holy city."],
+  ["World War I","The Hussein–McMahon Correspondence (1915–16) promised Arab independence in exchange for what?","A revolt against the Ottomans","Oil concessions","Control of the Suez Canal","Jewish immigration quotas","Britain encouraged Sharif Hussein of Mecca to launch the 1916 Arab Revolt. Whether Palestine was included in the promised area is still disputed."],
+  ["British Mandate","Which power received the League of Nations mandate for Palestine?","Britain","France","Italy","The United States","The Mandate was formally approved in 1922 and lasted until May 1948."],
+  ["British Mandate","Who was the Grand Mufti of Jerusalem and a leading Palestinian Arab nationalist during the Mandate?","Hajj Amin al-Husseini","Izz ad-Din al-Qassam","Musa Alami","Abd al-Qadir al-Husseini","Appointed by the British in 1921, al-Husseini headed the Arab Higher Committee and later collaborated with Nazi Germany during WWII."],
+  ["British Mandate","Riots in 1929 killed 67 Jews in which city, ending its ancient Jewish community for decades?","Hebron","Safed","Jaffa","Nablus","The 1929 riots began over access to the Western Wall. In Hebron, some Arab families also sheltered Jewish neighbours."],
+  ["British Mandate","What were the years of the Arab Revolt against British rule and Jewish immigration?","1936–1939","1920–1921","1929–1931","1945–1947","The revolt began with a general strike. Britain suppressed it with heavy force; thousands of Palestinian Arabs were killed."],
+  ["British Mandate","The 1937 Peel Commission was the first official body to propose what?","Partitioning Palestine","Ending the Mandate immediately","A binational federation","Annexing Palestine to Transjordan","Peel proposed a small Jewish state and an Arab area joined to Transjordan. Most Arab leaders rejected it; Zionist leaders were divided."],
+  ["British Mandate","Britain's 1939 White Paper capped Jewish immigration at how many people over five years?","75,000","10,000","250,000","1 million","The White Paper also promised an independent Palestine within ten years. It came just as Jews were desperately trying to flee Nazi Europe."],
+  ["British Mandate","Which Jewish underground group bombed the King David Hotel, the British administrative HQ, in 1946?","Irgun","Haganah","Lehi","Palmach","91 people were killed. The Irgun was led by Menachem Begin, who later became Prime Minister."],
+  ["British Mandate","Which Jewish paramilitary organization became the core of the Israel Defense Forces?","Haganah","Irgun","Lehi","Betar","The Haganah ('defense') was the main militia of the Yishuv. Its elite strike force was the Palmach."],
+  ["1947–1949","What is the number of the 1947 UN General Assembly resolution that recommended partition?","181","242","194","338","Resolution 181 passed on 29 November 1947, 33 votes to 13. Jewish leaders accepted it; Arab leaders rejected it."],
+  ["1947–1949","Under the 1947 UN partition plan, what status was proposed for Jerusalem?","International city","Capital of the Jewish state","Capital of the Arab state","Divided along the Green Line","Jerusalem and Bethlehem were to be a 'corpus separatum' under a UN trusteeship."],
+  ["1947–1949","On what date did David Ben-Gurion declare the establishment of the State of Israel?","14 May 1948","29 November 1947","15 May 1949","5 June 1948","The British Mandate ended at midnight. Armies of neighbouring Arab states entered the next day."],
+  ["1947–1949","Who was Israel's first Prime Minister?","David Ben-Gurion","Chaim Weizmann","Moshe Sharett","Levi Eshkol","Ben-Gurion served 1948–1954 and 1955–1963. Chaim Weizmann was Israel's first President."],
+  ["1947–1949","What do Palestinians call the 1948 displacement, meaning 'catastrophe' in Arabic?","Nakba","Naksa","Intifada","Sumud","The Nakba is marked on 15 May. 'Naksa' ('setback') refers to 1967, and 'sumud' means steadfastness."],
+  ["1947–1949","Roughly how many Palestinian Arabs fled or were expelled during the 1947–49 war?","About 700,000","About 70,000","About 250,000","About 2 million","Estimates usually range from 700,000 to 750,000. Their descendants are the core of today's refugee population."],
+  ["1947–1949","In April 1948, more than 100 villagers were killed by Irgun and Lehi fighters in which village near Jerusalem?","Deir Yassin","Lydda","Tantura","Qibya","News of Deir Yassin spread fear and accelerated flight from other Arab villages."],
+  ["1947–1949","In the 1948 war, Jewish communities were forced out of which part of Jerusalem after it fell to Jordan's Arab Legion?","The Old City's Jewish Quarter","West Jerusalem","Mount Scopus","Ein Karem","The Jewish Quarter surrendered in May 1948; its residents were expelled and many synagogues destroyed. Jews could not visit the Western Wall again until 1967."],
+  ["1947–1949","Which UN mediator was assassinated by the Lehi group in September 1948?","Folke Bernadotte","Ralph Bunche","Dag Hammarskjöld","Trygve Lie","Count Bernadotte had proposed a revised partition. Ralph Bunche took over and negotiated the 1949 armistices, winning the Nobel Peace Prize."],
+  ["1947–1949","What is the name commonly used for the 1949 armistice lines?","The Green Line","The Blue Line","The Purple Line","The Durand Line","It was drawn in green ink on the armistice maps. The 'Blue Line' is the Israel–Lebanon withdrawal line from 2000."],
+  ["1947–1949","UN General Assembly Resolution 194 (1948) is best known for its clause about what?","The return of refugees","Partition of Palestine","Jerusalem as Israel's capital","Withdrawal from occupied land","Paragraph 11 says refugees wishing to return home and live at peace should be permitted to do so. Its interpretation remains a core dispute."],
+  ["1947–1949","Which UN agency was created in 1949 specifically for Palestine refugees?","UNRWA","UNHCR","UNICEF","UNESCO","UNRWA runs schools, clinics and relief for registered Palestine refugees in Gaza, the West Bank, Jordan, Lebanon and Syria."],
+  ["1949–1967","Which country controlled the Gaza Strip from 1949 to 1967?","Egypt","Jordan","Israel","Britain","Egypt administered Gaza without annexing it. Jordan, by contrast, annexed the West Bank."],
+  ["1949–1967","Which country annexed the West Bank in 1950?","Jordan","Egypt","Syria","Iraq","Only Britain and Pakistan are generally said to have recognized the annexation. Jordan renounced its claim in 1988."],
+  ["1949–1967","Israel's 1950 Law of Return grants what right?","Every Jew the right to immigrate","Palestinian refugees the right to return","Settlers the right to vote abroad","Citizenship to all residents of Jerusalem","It was extended in 1970 to people with a Jewish grandparent and their spouses."],
+  ["1949–1967","From about 1948 to the early 1970s, roughly how many Jews left or were expelled from Arab and Muslim countries?","About 850,000","About 50,000","About 200,000","About 3 million","Many resettled in Israel, where Mizrahi Jews now make up a large part of the population."],
+  ["1949–1967","Which Egyptian president nationalized the Suez Canal in 1956?","Gamal Abdel Nasser","Anwar Sadat","Muhammad Naguib","Hosni Mubarak","Israel, Britain and France then attacked Egypt. US and Soviet pressure forced them to withdraw."],
+  ["1949–1967","In 1956, Israeli border police killed 48 Arab citizens returning from work during a curfew in which village?","Kafr Qasim","Umm al-Fahm","Sakhnin","Tayibe","The officers were convicted. In 2007 President Shimon Peres formally apologized."],
+  ["1949–1967","The Palestine Liberation Organization (PLO) was founded in which year?","1964","1948","1959","1969","It was founded at an Arab League summit, with Ahmad Shukeiri as its first chairman."],
+  ["1949–1967","In which country did Yasser Arafat and others found the Fatah movement in the late 1950s?","Kuwait","Egypt","Lebanon","Jordan","Several founders were working in Kuwait at the time. Fatah went on to dominate the PLO."],
+  ["1967","How long did the June 1967 war between Israel and Egypt, Jordan and Syria last?","Six days","Three weeks","Six weeks","Two days","It began 5 June and ended 10 June 1967."],
+  ["1967","Which territory did Israel capture from Syria in 1967?","Golan Heights","Sinai Peninsula","Gaza Strip","South Lebanon","Israel extended its law to the Golan in 1981. Most of the world considers it occupied Syrian territory."],
+  ["1967","What is the core principle of UN Security Council Resolution 242 (1967)?","Land for peace","Two capitals in Jerusalem","Right of return","Complete demilitarization","242 calls for withdrawal 'from territories occupied' and for every state's right to live within secure borders. The missing 'the' before 'territories' is famously debated."],
+  ["1967","The Arab League's 1967 Khartoum Resolution is remembered for its 'Three No's'. What were they?","No peace, no recognition, no negotiations","No war, no refugees, no settlements","No oil, no trade, no travel","No borders, no capital, no army","Adopted in September 1967, it shaped Arab policy until Egypt broke with it a decade later."],
+  ["1967","What do Palestinians call the 1967 defeat and displacement?","Naksa","Nakba","Sumud","Hijra","The Naksa ('setback') displaced around 300,000 more Palestinians, many for the second time."],
+  ["1970s","Which group killed 11 Israeli athletes and coaches at the 1972 Munich Olympics?","Black September","Hamas","Hezbollah","Islamic Jihad","Black September was linked to Fatah. A failed West German rescue attempt ended in the deaths of all the hostages."],
+  ["1970s","Who was Israel's Prime Minister during the 1973 Yom Kippur War?","Golda Meir","Levi Eshkol","Yitzhak Rabin","Menachem Begin","Meir, Israel's first and only woman Prime Minister, resigned in 1974 after the war's initial failures."],
+  ["1970s","Which two countries launched the surprise attack on Israel in October 1973?","Egypt and Syria","Jordan and Iraq","Syria and Lebanon","Egypt and Jordan","Arabs call it the October or Ramadan War. Oil-producing states then imposed an embargo on Israel's backers."],
+  ["1970s","In 1976, Israeli commandos rescued hostages from a hijacked plane at an airport in which country?","Uganda","Libya","Algeria","Somalia","The Entebbe raid freed over 100 hostages. Yoni Netanyahu, the unit commander and Benjamin Netanyahu's brother, was killed."],
+  ["1970s","Land Day, marked by Palestinians every 30 March, commemorates protests in which year?","1976","1948","1967","1987","Six Arab citizens of Israel were killed protesting land confiscations in the Galilee."],
+  ["1970s","Which Egyptian leader made a historic visit to Jerusalem and addressed the Knesset in 1977?","Anwar Sadat","Gamal Abdel Nasser","Hosni Mubarak","Muhammad Naguib","Sadat was assassinated in 1981 by Islamist army officers opposed to the peace."],
+  ["1970s","Which US president hosted the 1978 Camp David Accords between Begin and Sadat?","Jimmy Carter","Richard Nixon","Gerald Ford","Ronald Reagan","The 1979 peace treaty that followed returned the Sinai to Egypt by 1982. Begin and Sadat shared the 1978 Nobel Peace Prize."],
+  ["1980s","In 1982, after Israel's invasion of Lebanon, the PLO moved its headquarters to which city?","Tunis","Cairo","Damascus","Baghdad","The PLO stayed in Tunis until the Oslo period, when Arafat returned to Gaza in 1994."],
+  ["1980s","In which country are the Sabra and Shatila refugee camps, scene of a 1982 massacre?","Lebanon","Jordan","Syria","Gaza","Lebanese Christian Phalangist militiamen killed hundreds to thousands of civilians. Israel's Kahan Commission found Ariel Sharon bore 'personal responsibility'."],
+  ["1980s","In which year did the First Intifada begin?","1987","1982","1993","2000","It started in Gaza's Jabalia camp in December 1987 and was marked by strikes, boycotts and stone-throwing."],
+  ["1980s","Hamas was founded in 1987 by which cleric?","Sheikh Ahmed Yassin","Sheikh Izz ad-Din al-Qassam","Hassan Nasrallah","Fathi Shaqaqi","Yassin, a quadriplegic cleric from Gaza, was killed by an Israeli airstrike in 2004."],
+  ["1980s","Which poet drafted the 1988 Palestinian Declaration of Independence?","Mahmoud Darwish","Ghassan Kanafani","Fadwa Tuqan","Edward Said","Arafat read it in Algiers on 15 November 1988. The PLO soon signalled acceptance of Resolution 242."],
+  ["Oslo","The Oslo I Accord of 1993 was sealed with a famous handshake between Arafat and which Israeli Prime Minister?","Yitzhak Rabin","Shimon Peres","Ehud Barak","Yitzhak Shamir","The handshake happened on the White House lawn on 13 September 1993, hosted by Bill Clinton."],
+  ["Oslo","Which body was created by the Oslo Accords for Palestinian self-rule?","The Palestinian Authority","The PLO","The Arab Higher Committee","UNRWA","The PA governs parts of the West Bank. It also governed Gaza until Hamas took over in 2007."],
+  ["Oslo","Under the Oslo II agreement, which zone of the West Bank is under full Israeli civil and security control?","Area C","Area A","Area B","Area H2","Area C covers about 60% of the West Bank. Area A is under full PA control; Area B is under PA civil and Israeli security control."],
+  ["Oslo","Which country signed a peace treaty with Israel in 1994?","Jordan","Syria","Lebanon","Saudi Arabia","King Hussein and Yitzhak Rabin signed it at the Arava border crossing."],
+  ["Oslo","Who assassinated Prime Minister Yitzhak Rabin in November 1995?","An Israeli far-right extremist","A Hamas militant","A Lebanese agent","A PLO defector","Yigal Amir, a Jewish extremist opposed to Oslo, shot Rabin after a peace rally in Tel Aviv."],
+  ["Oslo","The 1994 Cave of the Patriarchs massacre, in which 29 Palestinian worshippers were killed, happened in which city?","Hebron","Nablus","Jenin","Bethlehem","An Israeli settler, Baruch Goldstein, opened fire during Ramadan prayers. Hamas then began suicide bombings inside Israel."],
+  ["Oslo","Who shared the 1994 Nobel Peace Prize with Rabin and Peres?","Yasser Arafat","Mahmoud Abbas","King Hussein","Faisal Husseini","The prize honoured the Oslo Accords."],
+  ["2000s","Which leaders met at the failed Camp David Summit of July 2000?","Clinton, Barak and Arafat","Clinton, Netanyahu and Abbas","Bush, Sharon and Arafat","Carter, Begin and Arafat","Each side still blames the other for the failure. The Second Intifada broke out two months later."],
+  ["2000s","Which Israeli politician's September 2000 visit to the Temple Mount / Haram al-Sharif preceded the Second Intifada?","Ariel Sharon","Benjamin Netanyahu","Ehud Olmert","Avigdor Lieberman","The uprising, also called the al-Aqsa Intifada, lasted until about 2005. Over 3,000 Palestinians and about 1,000 Israelis were killed."],
+  ["2000s","Which country proposed the 2002 Arab Peace Initiative?","Saudi Arabia","Egypt","Qatar","Jordan","It offered normalized relations with the Arab world in exchange for full withdrawal to 1967 lines and a 'just solution' for refugees."],
+  ["2000s","In 2004, which court issued an advisory opinion that the West Bank barrier's route violated international law?","International Court of Justice","International Criminal Court","Israeli Supreme Court","European Court of Human Rights","Israel says the barrier stopped suicide bombings. Critics say its route takes West Bank land. Construction began in 2002."],
+  ["2000s","Yasser Arafat died in November 2004 in a hospital in which country?","France","Jordan","Egypt","Tunisia","He was flown from his besieged Ramallah compound to a military hospital near Paris."],
+  ["2000s","In 2005, under Prime Minister Ariel Sharon, Israel withdrew all settlers and soldiers from where?","The Gaza Strip","The Golan Heights","South Lebanon","Area C","About 8,000 settlers were removed from 21 settlements. Israel kept control of Gaza's airspace, coastline and most crossings."],
+  ["2000s","Who was elected President of the Palestinian Authority in January 2005?","Mahmoud Abbas","Ismail Haniyeh","Marwan Barghouti","Salam Fayyad","No presidential election has been held since."],
+  ["2000s","Which party won the 2006 Palestinian legislative elections?","Hamas","Fatah","PFLP","Palestinian Islamic Jihad","Hamas won 74 of 132 seats. Fighting with Fatah ended with Hamas seizing Gaza in June 2007."],
+  ["2000s","Israel fought a 34-day war in 2006 against which group?","Hezbollah","Hamas","Fatah","Islamic State","It began after Hezbollah captured two Israeli soldiers in a cross-border raid."],
+  ["Gaza","What is the approximate area of the Gaza Strip?","365 km²","45 km²","1,500 km²","5,600 km²","Gaza is about 41 km long and 6–12 km wide. Over 2 million people lived there in 2023."],
+  ["Gaza","Which crossing connects Gaza to Egypt?","Rafah","Erez","Kerem Shalom","Allenby Bridge","Erez and Kerem Shalom connect Gaza to Israel. The Allenby Bridge links the West Bank to Jordan."],
+  ["Gaza","Israel's 2008–2009 war in Gaza was called what?","Operation Cast Lead","Operation Protective Edge","Operation Pillar of Defense","Operation Defensive Shield","Protective Edge was 2014, Pillar of Defense was 2012. Defensive Shield was the 2002 West Bank operation."],
+  ["Gaza","Weekly 2018–2019 protests along the Gaza boundary fence were known as what?","The Great March of Return","The Day of Rage","The Knife Intifada","The Flotilla Movement","More than 200 Palestinians were killed by Israeli fire over the course of the protests."],
+  ["Recent","In which year did the United States move its embassy to Jerusalem?","2018","2009","2016","2021","It opened in May 2018, following the Trump administration's 2017 recognition of Jerusalem as Israel's capital."],
+  ["Recent","Which two countries signed the first Abraham Accords with Israel in 2020?","UAE and Bahrain","Saudi Arabia and Oman","Morocco and Sudan","Qatar and Kuwait","Morocco and Sudan followed later in 2020."],
+  ["Recent","In what year did the UN General Assembly grant Palestine 'non-member observer state' status?","2012","1988","2004","2020","The vote was 138 to 9. Palestine joined the International Criminal Court in 2015."],
+  ["Recent","What name did Hamas give its 7 October 2023 attack on Israel?","Al-Aqsa Flood","Swords of Iron","Dawn of Return","Northern Shield","Israel named its military response 'Swords of Iron'."],
+  ["Recent","Roughly how many people were taken hostage into Gaza on 7 October 2023?","About 250","About 25","About 1,200","About 2,500","About 1,200 people were killed in Israel that day, the deadliest day for Jews since the Holocaust."],
+  ["Recent","Which country brought a genocide case against Israel at the International Court of Justice in December 2023?","South Africa","Turkey","Ireland","Brazil","The ICJ ordered provisional measures in January 2024. Israel denies the charge, and the case is ongoing."],
+  ["Jerusalem","The compound in Jerusalem that Jews call the Temple Mount is called what by Muslims?","Haram al-Sharif","Masjid al-Haram","Qubbat al-Sakhra","Bab al-Amud","It holds the al-Aqsa Mosque and the Dome of the Rock. Masjid al-Haram is the Great Mosque in Mecca."],
+  ["Jerusalem","Which body has administered the Islamic holy sites on the Temple Mount / Haram al-Sharif?","The Jordanian-run Waqf","The Palestinian Authority","Israel's Chief Rabbinate","The Saudi Ministry of Hajj","Under the 'status quo', Jews may visit but not pray there. Jordan's custodianship is recognized in its 1994 treaty with Israel."],
+  ["Politics","How many seats are in Israel's Knesset?","120","100","150","72","The number 120 echoes the Great Assembly of the Second Temple period. Coalitions need 61 to govern."],
+  ["Politics","In what year did Benjamin Netanyahu first become Prime Minister?","1996","2009","1992","2001","He beat Shimon Peres in Israel's first direct election for PM, held months after Rabin's assassination."],
+  ["Politics","The word 'intifada' translates from Arabic roughly as what?","Shaking off","Return","Struggle","Steadfastness","It describes the act of shaking something off, such as occupation."],
+];
+
+/* ---------- Config ---------- */
+const PER_DAY = 5;
+const LIMIT = 20000;            // ms per question
+const MAX_PTS = 1000, MIN_PTS = 100;
+const EPOCH = new Date(2026, 10, 14); // Gazle #1, 14 Nov 2026 (local)
+
+/* ---------- Storage (safe) ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("gazle:" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("gazle:" + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (n) => n.toLocaleString("en-US");
+function rng(seed) { return function () { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function shuffle(arr, r) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function dateKey(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function dayIndex(d) { const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()); return Math.round((a - EPOCH) / 86400000); }
+
+function buildQuestion(idx, r) {
+  const [era, q, correct, w1, w2, w3, fact] = BANK[idx];
+  const options = shuffle([correct, w1, w2, w3], r);
+  return { idx, era, q, options, answer: options.indexOf(correct), fact };
+}
+function dailyQuestions(n) {
+  const perCycle = Math.floor(BANK.length / PER_DAY);
+  const cycle = Math.floor(n / perCycle), pos = ((n % perCycle) + perCycle) % perCycle * PER_DAY;
+  const perm = shuffle(BANK.map((_, i) => i), rng(9001 + cycle * 7919));
+  const r = rng(424242 + n * 31);
+  return perm.slice(pos, pos + PER_DAY).map((i) => buildQuestion(i, r));
+}
+function practiceQuestions() {
+  const r = Math.random;
+  return shuffle(BANK.map((_, i) => i), r).slice(0, PER_DAY).map((i) => buildQuestion(i, r));
+}
+function points(ms) { return Math.round(MIN_PTS + (MAX_PTS - MIN_PTS) * Math.max(0, 1 - ms / LIMIT)); }
+function grade(a) { if (!a.correct) return "r"; return a.pts >= 700 ? "g" : "y"; }
+
+/* ---------- State ---------- */
+let today = new Date(), tKey = dateKey(today), tNum = dayIndex(today) + 1;
+let game = null;          // { mode, qs, answers[], i }
+let timer = null;         // { start, raf }
+
+function dailyRecord() { return store.get("daily:" + tKey, null); }
+function saveDaily(rec) { store.set("daily:" + tKey, rec); }
+
+function refreshChips() {
+  const s = store.get("stats", { best: 0, pbest: 0, streak: 0, lastDay: null, played: 0, totalCorrect: 0 });
+  // streak breaks if yesterday wasn't played
+  const y = new Date(today); y.setDate(y.getDate() - 1);
+  const streak = (s.lastDay === tKey || s.lastDay === dateKey(y)) ? s.streak : 0;
+  $("#c-streak").textContent = streak;
+  $("#c-best").textContent = fmt(s.best);
+  $("#c-pbest").textContent = fmt(s.pbest);
+  $("#daynum").textContent = "#" + tNum + " · " + today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return Object.assign({}, s, { streak });
+}
+
+/* ---------- Screens ---------- */
+function showStart() {
+  stopTimer();
+  const rec = dailyRecord();
+  if (rec && rec.done) return showResults("daily");
+  const resuming = rec && rec.answers && rec.answers.length;
+  $("#stage").innerHTML = `
+    <div class="label">Daily · ${PER_DAY} questions</div>
+    <h2>Five questions on the history of Israel and Palestine. The faster you answer, the more you score.</h2>
+    <dl class="rules">
+      <dt>${fmt(MAX_PTS)}</dt><dd>points for an instant correct answer</dd>
+      <dt>${MIN_PTS}</dt><dd>points for a correct answer in the final second</dd>
+      <dt>0</dt><dd>for a wrong answer or running out the ${LIMIT / 1000}-second clock</dd>
+      <dt>∞</dt><dd>practice rounds unlock once today's daily is done</dd>
+    </dl>
+    <div class="row">
+      <button class="btn btn-primary" id="go">${resuming ? "Resume daily (" + rec.answers.length + "/" + PER_DAY + ")" : "Start daily #" + tNum}</button>
+    </div>`;
+  $("#go").onclick = () => startGame("daily");
+  $("#go").focus();
+}
+
+function startGame(mode) {
+  const qs = mode === "daily" ? dailyQuestions(tNum - 1) : practiceQuestions();
+  let answers = [];
+  if (mode === "daily") {
+    const rec = dailyRecord();
+    answers = rec && rec.answers ? rec.answers : [];
+    saveDaily({ answers, done: false });
+  }
+  game = { mode, qs, answers, i: answers.length, locked: false };
+  if (game.i >= PER_DAY) return finish();
+  showQuestion();
+}
+
+function pipsHTML() {
+  return '<div class="progress">' + game.qs.map((_, k) => {
+    const a = game.answers[k];
+    return '<span class="pip ' + (a ? grade(a) : (k === game.i ? "cur" : "")) + '"></span>';
+  }).join("") + "</div>";
+}
+
+function showQuestion() {
+  const q = game.qs[game.i];
+  game.locked = false;
+  $("#stage").innerHTML = `
+    ${pipsHTML()}
+    <div class="qhead">
+      <span class="era">${game.mode === "practice" ? "Practice · " : ""}Q${game.i + 1} · ${esc(q.era)}</span>
+      <span class="livepts" id="live">${fmt(MAX_PTS)}</span>
+    </div>
+    <div class="timer"><i id="bar"></i></div>
+    <h2>${esc(q.q)}</h2>
+    <div class="opts">${q.options.map((o, k) => `<button class="opt" data-k="${k}" id="opt${k}"><span class="k">${k + 1}</span><span>${esc(o)}</span></button>`).join("")}</div>
+    <div id="fb"></div>`;
+  document.querySelectorAll(".opt").forEach((b) => (b.onclick = () => answer(+b.dataset.k)));
+  startTimer();
+}
+
+function startTimer() {
+  stopTimer();
+  const start = performance.now();
+  timer = { start, raf: 0 };
+  const bar = $("#bar"), live = $("#live");
+  const tick = (now) => {
+    const ms = now - start;
+    const frac = Math.max(0, 1 - ms / LIMIT);
+    bar.style.transform = "scaleX(" + frac + ")";
+    live.textContent = fmt(points(ms));
+    if (ms >= LIMIT) { answer(-1); return; }
+    timer.raf = requestAnimationFrame(tick);
+  };
+  timer.raf = requestAnimationFrame(tick);
+}
+function stopTimer() { if (timer) cancelAnimationFrame(timer.raf); timer = null; }
+
+function answer(k) {
+  if (!game || game.locked || !timer) return;
+  game.locked = true;
+  const ms = Math.min(LIMIT, performance.now() - timer.start);
+  stopTimer();
+  const q = game.qs[game.i];
+  const correct = k === q.answer;
+  const pts = correct ? points(ms) : 0;
+  const a = { idx: q.idx, choice: k, correct, ms: Math.round(ms), pts };
+  game.answers.push(a);
+  if (game.mode === "daily") saveDaily({ answers: game.answers, done: false });
+
+  document.querySelectorAll(".opt").forEach((b) => {
+    const bk = +b.dataset.k;
+    b.disabled = true;
+    if (bk === q.answer) b.classList.add("correct");
+    else if (bk === k) b.classList.add("wrong");
+    else b.classList.add("dim");
+  });
+  $("#live").textContent = correct ? "+" + fmt(pts) : "+0";
+  $(".progress").outerHTML = pipsHTML();
+  const last = game.i === PER_DAY - 1;
+  const verdict = k === -1 ? "Out of time" : correct ? "Correct · " + (ms / 1000).toFixed(1) + "s" : "Not quite";
+  $("#fb").innerHTML = `
+    <div class="feedback">
+      <div class="verdict ${correct ? "good" : "bad"}">${verdict}</div>
+      <p class="muted">${esc(q.fact)}</p>
+      <div class="row"><button class="btn btn-primary" id="next">${last ? "See results" : "Next question"}</button></div>
+    </div>`;
+  $("#next").onclick = next;
+  $("#next").focus();
+}
+
+function next() {
+  if (!game) return;
+  game.i++;
+  if (game.i >= PER_DAY) finish(); else showQuestion();
+}
+
+function finish() {
+  const total = game.answers.reduce((s, a) => s + a.pts, 0);
+  const s = refreshChips();
+  if (game.mode === "daily") {
+    const rec = dailyRecord();
+    if (!rec || !rec.done) {
+      saveDaily({ answers: game.answers, done: true, total });
+      const y = new Date(today); y.setDate(y.getDate() - 1);
+      const streak = s.lastDay === dateKey(y) ? s.streak + 1 : (s.lastDay === tKey ? s.streak : 1);
+      store.set("stats", Object.assign({}, s, {
+        best: Math.max(s.best, total), streak, lastDay: tKey, played: (s.played || 0) + 1,
+        totalCorrect: (s.totalCorrect || 0) + game.answers.filter((a) => a.correct).length
+      }));
+    }
+  } else {
+    const newBest = total > s.pbest;
+    store.set("stats", Object.assign({}, s, { pbest: Math.max(s.pbest, total) }));
+    game.newBest = newBest;
+  }
+  showResults(game.mode, game);
+}
+
+function breakdownHTML(answers) {
+  return '<div class="breakdown">' + answers.map((a) => {
+    const g = grade(a), col = g === "g" ? "var(--good)" : g === "y" ? "var(--gold)" : "var(--bad)";
+    return `<div class="bd"><span class="dot" style="background:${col}"></span><span class="q">${esc(BANK[a.idx][1])}</span><span class="t">${a.choice === -1 ? "—" : (a.ms / 1000).toFixed(1) + "s"}</span><span class="p">${fmt(a.pts)}</span></div>`;
+  }).join("") + "</div>";
+}
+
+function shareText(rec) {
+  const map = { g: "🟩", y: "🟨", r: "🟥" };
+  const avg = rec.answers.filter((a) => a.correct);
+  const avgS = avg.length ? (avg.reduce((s, a) => s + a.ms, 0) / avg.length / 1000).toFixed(1) + "s avg" : "";
+  return "Gazle #" + tNum + "  " + fmt(rec.total) + "/" + fmt(MAX_PTS * PER_DAY) + "\n" + rec.answers.map((a) => map[grade(a)]).join("") + (avgS ? "  " + avgS : "");
+}
+
+function showResults(mode, g) {
+  stopTimer();
+  const s = refreshChips();
+  const isDaily = mode === "daily";
+  const rec = isDaily ? dailyRecord() : { answers: g.answers, total: g.answers.reduce((x, a) => x + a.pts, 0) };
+  const correct = rec.answers.filter((a) => a.correct).length;
+  $("#stage").innerHTML = `
+    ${isDaily ? '<div class="label">Daily #' + tNum + ' complete</div>' : '<div class="label">Practice round' + (g.newBest ? " · new practice best" : "") + "</div>"}
+    <div class="big">${fmt(rec.total)} <small>/ ${fmt(MAX_PTS * PER_DAY)} · ${correct}/${PER_DAY} correct</small></div>
+    ${breakdownHTML(rec.answers)}
+    ${isDaily ? `
+      <div class="stats">
+        <div class="stat"><span class="label">Played</span><b>${s.played || 1}</b></div>
+        <div class="stat"><span class="label">Streak</span><b>${s.streak}</b></div>
+        <div class="stat"><span class="label">Best</span><b>${fmt(s.best)}</b></div>
+        <div class="stat"><span class="label">Accuracy</span><b>${s.played ? Math.round((s.totalCorrect / (s.played * PER_DAY)) * 100) : 0}%</b></div>
+      </div>
+      <div class="stat"><span class="label">Next daily in</span><span class="countdown" id="cd">--:--:--</span></div>` : ""}
+    <div class="row">
+      ${isDaily ? '<button class="btn btn-ghost" id="share">Copy result</button>' : '<button class="btn btn-ghost" id="back">Back to daily results</button>'}
+      <button class="btn btn-primary" id="practice">${isDaily ? "Play practice round" : "Play again"}</button>
+    </div>
+    <div class="toast" id="toast"></div>`;
+  $("#practice").onclick = () => startGame("practice");
+  $("#practice").focus();
+  if (isDaily) {
+    $("#share").onclick = () => {
+      const text = shareText(rec);
+      const done = () => ($("#toast").textContent = "Copied to clipboard.");
+      const fail = () => {
+        $("#toast").innerHTML = '<textarea class="share-fallback" id="sharebox" rows="3" readonly>' + esc(text) + "</textarea>";
+        const t = $("#sharebox"); t.focus(); t.select();
+      };
+      try { navigator.clipboard.writeText(text).then(done, fail); } catch (e) { fail(); }
+    };
+    tickCountdown();
+  } else {
+    $("#back").onclick = () => { game = null; showResults("daily"); };
+  }
+}
+
+let cdTimer = 0;
+function tickCountdown() {
+  clearInterval(cdTimer);
+  const run = () => {
+    const now = new Date();
+    if (dateKey(now) !== tKey) { // new day rolled over
+      clearInterval(cdTimer);
+      today = now; tKey = dateKey(now); tNum = dayIndex(now) + 1;
+      refreshChips(); showStart(); return;
+    }
+    const el = $("#cd"); if (!el) { clearInterval(cdTimer); return; }
+    const mid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const left = Math.max(0, Math.floor((mid - now) / 1000));
+    const h = Math.floor(left / 3600), m = Math.floor((left % 3600) / 60), sec = left % 60;
+    el.textContent = [h, m, sec].map((v) => String(v).padStart(2, "0")).join(":");
+  };
+  run(); cdTimer = setInterval(run, 1000);
+}
+
+/* ---------- Keyboard ---------- */
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (game && !game.locked && timer && /^[1-4]$/.test(e.key)) { e.preventDefault(); answer(+e.key - 1); }
+  else if (e.key === "Enter" && game && game.locked && $("#next")) { e.preventDefault(); next(); }
+});
+
+/* If the tab is hidden mid-question during the daily, the clock keeps running (no pausing to look things up). */
+
+refreshChips();
+showStart();
+})();
+</script>
+<!-- GAZLE:BODY-END -->
+</body>
+</html>
