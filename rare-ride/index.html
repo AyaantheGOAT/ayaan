@@ -1,0 +1,1477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}</style>
+<title>Rare Ride</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:ital,wght@0,400;0,600;0,800;0,900;1,900&family=Overpass+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column, a single highway sign as the hero of every round; road-sign colors encode rarity tiers. */
+:root {
+  --bg: #e5e9e2;
+  --surface: #f5f7f2;
+  --ink: #14201a;
+  --muted: #56645b;
+  --line: #c8d0c5;
+  --sign: #0b6a43;
+  --sign-ink: #ffffff;
+  --t0: #7f8a83;
+  --t1: #1b8a4d;
+  --t2: #1f5fa8;
+  --t3: #7a4a26;
+  --t4: #f0b400;
+  --t4-ink: #1d1600;
+  --bad: #b3261e;
+  --display: "Overpass", "Highway Gothic", "Arial Narrow", system-ui, sans-serif;
+  --body: "Overpass", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Overpass Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1310; --surface: #151d19; --ink: #e5ece7; --muted: #93a299; --line: #27322c;
+    --sign: #0e7a4c; --sign-ink: #f4f8f5;
+    --t0: #6d7871; --t1: #2fa565; --t2: #3b7dd2; --t3: #9c6639; --t4: #ffc61a; --t4-ink: #1d1600;
+    --bad: #ff7a6e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1310; --surface: #151d19; --ink: #e5ece7; --muted: #93a299; --line: #27322c;
+  --sign: #0e7a4c; --sign-ink: #f4f8f5;
+  --t0: #6d7871; --t1: #2fa565; --t2: #3b7dd2; --t3: #9c6639; --t4: #ffc61a; --t4-ink: #1d1600;
+  --bad: #ff7a6e; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; }
+.wrap {
+  max-width: 600px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 56px;
+  display: flex; flex-direction: column; gap: 22px;
+}
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+
+/* top bar */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand {
+  font-family: var(--display); font-weight: 900; font-style: italic; font-size: 22px; letter-spacing: .02em;
+  background: none; border: 0; color: var(--ink); padding: 4px 0; cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+.brand:disabled { cursor: default; }
+.brand .shield {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 7px;
+  background: var(--sign); color: var(--sign-ink); font-style: normal; font-size: 15px;
+  box-shadow: inset 0 0 0 2px var(--sign), inset 0 0 0 3.5px var(--sign-ink);
+}
+.top-meta { font-size: 13px; color: var(--muted); font-weight: 600; text-align: right; }
+
+/* buttons */
+.btn {
+  font: 800 16px/1 var(--display); letter-spacing: .02em; padding: 15px 20px; border-radius: 10px; cursor: pointer;
+  border: 2px solid var(--ink); background: transparent; color: var(--ink); min-height: 50px;
+}
+.btn.primary { background: var(--sign); border-color: var(--sign); color: var(--sign-ink); }
+.btn:hover { filter: brightness(1.08); }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible, .link:focus-visible, .brand:focus-visible, input:focus-visible { outline: 3px solid var(--t4); outline-offset: 2px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.link { background: none; border: 0; color: var(--muted); font: 600 15px var(--body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px 2px; }
+
+/* home */
+.hero { font-size: clamp(2.3rem, 9vw, 3.5rem); line-height: .98; font-weight: 900; letter-spacing: -.01em; }
+.hero span { color: var(--sign); }
+.lede { font-size: 17px; color: var(--muted); max-width: 34em; }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .modes { grid-template-columns: 1fr; } }
+.mode { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.mode h2 { font-size: 21px; font-weight: 800; line-height: 1.15; }
+.mode p { font-size: 15px; color: var(--muted); flex: 1; }
+.mode.daily { border: 2px solid var(--sign); }
+.mode .btn { width: 100%; }
+.stats { display: flex; gap: 22px; flex-wrap: wrap; }
+.stat b { display: block; font: 700 24px/1.1 var(--mono); }
+.stat span { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.legend { display: flex; flex-direction: column; gap: 8px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 5px 10px; border-radius: 6px; font-size: 13px; font-weight: 800; color: #fff; }
+.chip .mono { font-size: 12px; opacity: .9; }
+.t0 { background: var(--t0); color: #fff; } .t1 { background: var(--t1); color: #fff; } .t2 { background: var(--t2); color: #fff; }
+.t3 { background: var(--t3); color: #fff; } .t4 { background: var(--t4); color: var(--t4-ink); }
+.tnone { background: var(--line); color: var(--ink); }
+.fine { font-size: 13px; color: var(--muted); }
+.how { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; font-size: 15px; }
+.how li { display: flex; gap: 10px; }
+.how li b { font-family: var(--mono); color: var(--sign); min-width: 1.4em; }
+
+/* play */
+.hud { display: flex; justify-content: space-between; font-weight: 700; font-size: 14px; color: var(--muted); }
+.signpost { position: relative; padding-top: 30px; }
+.exit-tab {
+  position: absolute; top: 0; right: 22px; height: 36px; padding: 0 14px; display: flex; align-items: center;
+  background: var(--sign); color: var(--sign-ink); font: 900 15px/1 var(--display); letter-spacing: .08em;
+  border-radius: 9px 9px 0 0; box-shadow: inset 0 0 0 3px var(--sign), inset 0 0 0 5px var(--sign-ink); clip-path: inset(0 0 4px 0);
+}
+.sign {
+  background: var(--sign); color: var(--sign-ink); border-radius: 16px; padding: 26px 24px 28px;
+  box-shadow: inset 0 0 0 4px var(--sign), inset 0 0 0 7px var(--sign-ink), 0 10px 24px -14px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; gap: 8px; min-height: 170px; justify-content: center;
+}
+.sign-sub { font: 800 12px var(--display); letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
+.sign h2 { font-size: clamp(1.65rem, 6.4vw, 2.35rem); line-height: 1.08; font-weight: 800; }
+.sign .note { font-size: 15px; opacity: .9; }
+.timer { height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
+.timer-bar { height: 100%; width: 100%; background: var(--t4); transform-origin: left; }
+.timer-bar.low { background: var(--bad); }
+.timer-row { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); font-weight: 600; margin-top: -12px; }
+form.answer { display: flex; gap: 8px; }
+form.answer input {
+  flex: 1; min-width: 0; font: 600 18px var(--body); padding: 13px 14px; border-radius: 10px;
+  border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+}
+form.answer input:focus { border-color: var(--sign); outline: none; }
+.fb { min-height: 1.5em; font-weight: 700; font-size: 15px; margin-top: -10px; }
+.fb.bad { color: var(--bad); }
+.shake { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.tries { display: flex; flex-wrap: wrap; gap: 6px; margin-top: -10px; }
+.tries span { font-size: 13px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); text-decoration: line-through; }
+.row-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+
+/* reveal */
+.rev-prompt { font: 800 19px/1.25 var(--display); color: var(--muted); }
+.rev-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 12px; }
+.rev-answer { font: 900 clamp(1.6rem, 6vw, 2.1rem)/1.1 var(--display); }
+.rev-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.odo { display: inline-flex; gap: 3px; }
+.odo i { font: 700 30px/1 var(--mono); font-style: normal; background: var(--ink); color: var(--bg); padding: 6px 5px 3px; border-radius: 4px; min-width: 1.1em; text-align: center; }
+.odo-wrap { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--muted); }
+.tier-badge { padding: 7px 12px; border-radius: 8px; font: 900 15px var(--display); letter-spacing: .04em; text-transform: uppercase; }
+.strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.strip div { height: 28px; border-radius: 5px; opacity: .28; display: grid; place-items: center; font: 700 12px var(--mono); }
+.strip div.on { opacity: 1; outline: 2px solid var(--ink); outline-offset: 2px; }
+.strip-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-weight: 600; margin-top: -6px; }
+.lists { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 440px) { .lists { grid-template-columns: 1fr; } }
+.lists h3 { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 800; margin-bottom: 6px; }
+.lists ol { margin: 0; padding-left: 1.3em; display: grid; gap: 2px; font-size: 15px; }
+.lists li { min-width: 0; overflow-wrap: anywhere; }
+
+/* summary */
+.total { display: flex; align-items: center; gap: 10px; font: 700 18px var(--mono); color: var(--muted); }
+.total .odo i { font-size: 44px; }
+.sum-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sum-rows li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.sum-rows .q { font-size: 14px; color: var(--muted); font-weight: 600; grid-column: 1 / -1; }
+.sum-rows .a { font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+.sum-rows .chip { align-self: start; }
+.share { display: flex; flex-direction: column; gap: 8px; }
+.share textarea { font: 14px var(--mono); padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: none; height: 90px; }
+.next-in { font-weight: 700; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-row .btn { flex: 1 1 200px; }
+
+@media (prefers-reduced-motion: reduce) { .shake { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <button class="brand" id="homeBtn" type="button" aria-label="Rare Ride home"><span class="shield">RR</span>RARE RIDE</button>
+    <span class="top-meta" id="topMeta"></span>
+  </header>
+
+  <main>
+  <!-- HOME -->
+  <section id="home" style="display:flex;flex-direction:column;gap:22px">
+    <h1 class="hero">Name a car.<br><span>The rarer, the better.</span></h1>
+    <p class="lede">Every prompt asks for a car that fits. You have 25 seconds. The most obvious answers score 10. Deep cuts score up to 100.</p>
+    <div class="modes">
+      <div class="mode daily">
+        <span class="eyebrow" id="dailyEyebrow">Daily drive</span>
+        <h2>5 prompts, once a day</h2>
+        <p id="dailyStatus">Everyone gets the same five prompts today.</p>
+        <button id="dailyBtn" class="btn primary" type="button">Start today’s drive</button>
+      </div>
+      <div class="mode">
+        <span class="eyebrow">Practice</span>
+        <h2>Unlimited prompts</h2>
+        <p>Random prompts, as many as you want. Practice doesn’t touch your daily score or streak.</p>
+        <button id="practiceBtn" class="btn" type="button">Start practice</button>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <ul class="how">
+      <li><b>1</b><span>Read the sign. Type a car that fits: a model works, or make and model.</span></li>
+      <li><b>2</b><span>Wrong guesses don’t cost points. Keep trying until the clock runs out.</span></li>
+      <li><b>3</b><span>Your answer is ranked against every car in the garage that fits the prompt.</span></li>
+    </ul>
+    <div class="legend">
+      <span class="eyebrow">Rarity tiers</span>
+      <div class="legend-row" id="legend"></div>
+    </div>
+    <p class="fine" id="fineprint"></p>
+  </section>
+
+  <!-- PLAY -->
+  <section id="play" hidden style="flex-direction:column;gap:22px">
+    <div class="hud"><span id="hudLeft"></span><span id="hudRight" class="mono"></span></div>
+    <div class="signpost">
+      <div class="exit-tab" id="exitTab">EXIT 1</div>
+      <div class="sign">
+        <p class="sign-sub" id="famLabel"></p>
+        <h2 id="promptText"></h2>
+        <p class="note" id="promptNote" hidden></p>
+      </div>
+    </div>
+    <div class="timer"><div class="timer-bar" id="timerBar"></div></div>
+    <div class="timer-row"><span><span id="secs" class="mono">25</span>s left</span><span id="triesCount"></span></div>
+    <form class="answer" id="ansForm" autocomplete="off">
+      <input id="ans" name="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Model, or make and model" aria-label="Your answer">
+      <button class="btn primary" type="submit">Lock in</button>
+    </form>
+    <p class="fb" id="fb" aria-live="polite"></p>
+    <div class="tries" id="tries"></div>
+    <div class="row-actions"><span class="fine">Press Enter to submit.</span><button id="passBtn" class="link" type="button">Pass on this one</button></div>
+  </section>
+
+  <!-- REVEAL -->
+  <section id="reveal" hidden style="flex-direction:column;gap:18px">
+    <div class="hud"><span id="revHudLeft"></span><span id="revHudRight" class="mono"></span></div>
+    <p class="rev-prompt" id="revPrompt"></p>
+    <div class="rev-card">
+      <span class="eyebrow">Your answer</span>
+      <div class="rev-answer" id="revAnswer"></div>
+      <div class="rev-line">
+        <div class="odo-wrap"><span class="odo" id="revPts"></span>pts</div>
+        <span class="tier-badge" id="revTier"></span>
+      </div>
+      <div class="strip" id="strip"></div>
+      <div class="strip-labels"><span>Everyone says it</span><span>Nobody says it</span></div>
+      <p class="muted" id="revRank"></p>
+    </div>
+    <div class="lists">
+      <div><h3>Most common answers</h3><ol id="commonList"></ol></div>
+      <div><h3>Barn finds you could’ve said</h3><ol id="rareList"></ol></div>
+    </div>
+    <div class="btn-row">
+      <button id="nextBtn" class="btn primary" type="button">Next exit</button>
+      <button id="quitBtn" class="btn" type="button" hidden>Back to start</button>
+    </div>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="summary" hidden style="flex-direction:column;gap:20px">
+    <span class="eyebrow" id="sumEyebrow"></span>
+    <div class="total"><span class="odo" id="sumTotal"></span><span>/ 500</span></div>
+    <ul class="sum-rows" id="sumRows"></ul>
+    <div class="share">
+      <button id="shareBtn" class="btn primary" type="button">Copy results</button>
+      <textarea id="shareText" readonly hidden aria-label="Results to share"></textarea>
+      <span class="fine" id="shareMsg" aria-live="polite"></span>
+    </div>
+    <p class="next-in" id="nextIn"></p>
+    <div class="btn-row">
+      <button id="sumPractice" class="btn" type="button">Keep driving in practice</button>
+    </div>
+  </section>
+  </main>
+</div>
+
+<script>
+/* ---------- the garage: Make|Model|tags|popularity(1-100)|aliases ---------- */
+const RAW = `
+Toyota|Camry|jp sedan hyb taxi cheap|95|
+Toyota|Corolla|jp sedan hatch hyb cheap classic|97|
+Toyota|Prius|jp hatch hyb taxi|90|
+Toyota|RAV4|jp suv hyb|85|rav 4
+Toyota|Supra|jp coupe sport popup film|92|mk4 supra,a80,a90,gr supra,mkiv supra
+Toyota|Tacoma|jp truck off place|72|taco
+Toyota|Tundra|jp truck v8 off|58|
+Toyota|4Runner|jp suv off|60|four runner,forerunner
+Toyota|Land Cruiser|jp suv off v8 classic|62|landcruiser,fj40,lc200,lc300
+Toyota|Highlander|jp suv hyb|48|
+Toyota|Sienna|jp van hyb taxi place|42|
+Toyota|MR2|jp coupe sport mid popup dead|40|mr 2,mr-s
+Toyota|Celica|jp coupe hatch sport popup dead classic|44|
+Toyota|AE86|jp coupe hatch sport popup dead film|33|corolla ae86,sprinter trueno,trueno,levin,hachiroku
+Toyota|GR86|jp coupe sport|36|86,gt86,gr 86
+Toyota|GR Yaris|jp hatch sport hot|24|
+Toyota|Yaris|jp hatch cheap|38|vitz
+Toyota|FJ Cruiser|jp suv off dead|30|fj
+Toyota|Sequoia|jp suv v8|24|
+Toyota|2000GT|jp coupe sport classic dead film|9|2000 gt
+Toyota|Avalon|jp sedan dead|20|
+Toyota|Hilux|jp truck off classic|30|
+Toyota|Crown|jp sedan taxi classic|12|crown majesta
+Toyota|Previa|jp van dead|6|estima
+Toyota|C-HR|jp suv|14|chr
+Toyota|bZ4X|jp suv ev|8|bz
+Toyota|Mirai|jp sedan|6|
+Toyota|Century|jp sedan lux v12|7|
+Honda|Civic|jp sedan hatch cheap hot classic|98|type r,civic type r,civic si,ek9
+Honda|Accord|jp sedan hyb classic|84|
+Honda|CR-V|jp suv hyb|70|crv
+Honda|Pilot|jp suv|34|
+Honda|Odyssey|jp van|44|
+Honda|NSX|jp coupe sport super mid popup hyb dead|56|acura nsx,nsx type r
+Honda|S2000|jp conv sport dead film|50|s2k,s 2000,ap1,ap2
+Honda|Fit|jp hatch cheap|30|jazz
+Honda|Prelude|jp coupe sport popup hyb|24|
+Honda|Ridgeline|jp truck|20|
+Honda|Insight|jp hatch hyb dead|15|
+Honda|Element|jp suv dead|18|
+Honda|CR-X|jp hatch sport dead|15|crx
+Honda|HR-V|jp suv|15|hrv,vezel
+Honda|Passport|jp suv|8|
+Honda|e|jp hatch ev dead|4|
+Honda|Beat|jp conv mid dead|6|
+Honda|N-Box|jp hatch cheap|4|
+Nissan|GT-R|jp coupe sport super film dead|85|gtr,r35,r34,r33,r32,skyline gtr,godzilla,skyline gt-r
+Nissan|Skyline|jp coupe sedan sport film classic|58|
+Nissan|350Z|jp coupe conv sport dead film|55|350 z,z33
+Nissan|370Z|jp coupe conv sport dead|35|370 z
+Nissan|Z|jp coupe sport|20|400z,fairlady z,fairlady
+Nissan|300ZX|jp coupe sport popup dead|20|300 zx,z32,z31
+Nissan|240SX|jp coupe hatch sport popup dead|20|silvia,s13,s14,s15,180sx,240 sx
+Nissan|Altima|jp sedan cheap|50|
+Nissan|Sentra|jp sedan cheap|34|
+Nissan|Leaf|jp hatch ev|52|
+Nissan|Rogue|jp suv|38|x-trail,xtrail
+Nissan|Frontier|jp truck|24|navara
+Nissan|Titan|jp truck v8 dead|24|
+Nissan|Pathfinder|jp suv|30|
+Nissan|Maxima|jp sedan dead|24|
+Nissan|Juke|jp suv|24|
+Nissan|Versa|jp sedan cheap|20|
+Nissan|Armada|jp suv v8|10|
+Nissan|Patrol|jp suv off v8 classic|12|
+Nissan|Cube|jp hatch dead|14|
+Nissan|Murano|jp suv place|12|
+Nissan|Xterra|jp suv off dead|14|
+Nissan|Ariya|jp suv ev|6|
+Nissan|Quest|jp van dead|5|
+Nissan|NV200|jp van taxi|5|nv 200,taxi of tomorrow
+Datsun|240Z|jp coupe sport classic dead|22|240 z,fairlady 240z,s30,280z,260z
+Datsun|510|jp sedan classic dead|8|bluebird
+Mazda|Miata|jp conv sport cheap popup|85|mx5,mx-5,mx 5,eunos roadster
+Mazda|RX-7|jp coupe sport popup dead film classic|64|rx7,fd,fd3s,fc
+Mazda|RX-8|jp coupe sport dead|30|rx8
+Mazda|Mazda3|jp sedan hatch cheap hot|44|mazda 3,mazdaspeed3,mazdaspeed 3
+Mazda|Mazda6|jp sedan wagon|20|mazda 6,atenza
+Mazda|CX-5|jp suv|40|cx5
+Mazda|CX-9|jp suv dead|12|cx9
+Mazda|CX-30|jp suv|10|cx30
+Mazda|CX-90|jp suv hyb|8|cx90
+Mazda|MX-30|jp suv ev|3|mx30
+Mazda|Cosmo|jp coupe classic dead|5|cosmo sport
+Mazda|MPV|jp van dead|3|
+Subaru|WRX|jp sedan sport hot|75|impreza wrx,sti,wrx sti,impreza sti
+Subaru|Impreza|jp sedan hatch cheap|34|
+Subaru|Outback|jp wagon suv off|54|
+Subaru|Forester|jp suv off|44|
+Subaru|Crosstrek|jp suv off|30|xv
+Subaru|BRZ|jp coupe sport|38|
+Subaru|Legacy|jp sedan wagon|20|
+Subaru|Ascent|jp suv|8|
+Subaru|Baja|jp truck dead|10|
+Subaru|BRAT|jp truck dead classic|9|
+Subaru|SVX|jp coupe dead|6|alcyone
+Subaru|Solterra|jp suv ev|3|
+Subaru|360|jp classic dead cheap|4|
+Mitsubishi|Lancer Evolution|jp sedan sport hot dead film|60|evo,lancer evo,evolution,evo x,evo 9,evo ix
+Mitsubishi|Lancer|jp sedan cheap dead|20|
+Mitsubishi|Eclipse|jp coupe hatch sport popup dead film|48|
+Mitsubishi|3000GT|jp coupe hatch sport popup dead|24|3000 gt
+Mitsubishi|Outlander|jp suv hyb|24|
+Mitsubishi|Pajero|jp suv off dead|20|montero,shogun
+Mitsubishi|Mirage|jp hatch cheap|14|
+Mitsubishi|Galant|jp sedan dead|10|
+Mitsubishi|i-MiEV|jp hatch ev dead|5|imiev
+Mitsubishi|Starion|jp coupe hatch dead|5|
+Mitsubishi|Delica|jp van off|8|
+Lexus|LFA|jp coupe super sport v10 dead|46|
+Lexus|IS|jp sedan lux sport|30|is300,is350,isf,is f
+Lexus|ES|jp sedan lux hyb|24|es350
+Lexus|LS|jp sedan lux v8|24|ls400,ls460,ls500
+Lexus|RX|jp suv lux hyb|34|rx350
+Lexus|LX|jp suv lux off v8|14|lx570,lx600
+Lexus|GX|jp suv lux off v8|14|gx460,gx550
+Lexus|LC|jp coupe conv lux sport v8|24|lc500
+Lexus|RC|jp coupe sport|10|rcf,rc f,rc350
+Lexus|SC|jp coupe conv lux dead|10|sc300,sc400,sc430,soarer
+Lexus|NX|jp suv lux hyb|10|
+Lexus|GS|jp sedan lux dead|8|gs300,gs400
+Acura|Integra|jp coupe hatch sport hot|38|integra type r,dc2
+Acura|RSX|jp coupe hatch dead|14|rsx type s
+Acura|TL|jp sedan lux dead|10|
+Acura|TSX|jp sedan dead|8|
+Acura|MDX|jp suv lux|20|
+Acura|RDX|jp suv lux|14|
+Acura|TLX|jp sedan lux|10|
+Acura|Legend|jp sedan lux dead|8|
+Infiniti|G35|jp coupe sedan lux dead|20|g37
+Infiniti|Q50|jp sedan lux|12|
+Infiniti|QX80|jp suv lux v8|10|qx56
+Infiniti|FX|jp suv dead|6|fx35,fx45,fx50
+Suzuki|Jimny|jp suv off cheap classic|30|
+Suzuki|Swift|jp hatch cheap|25|
+Suzuki|Samurai|jp suv off dead|14|sj410,sj413
+Suzuki|Vitara|jp suv off|14|grand vitara,sidekick,escudo
+Suzuki|Cappuccino|jp conv dead|6|
+Suzuki|Alto|jp hatch cheap classic|6|
+Daihatsu|Copen|jp conv|4|
+Daihatsu|Hijet|jp truck van cheap classic|5|
+Scion|tC|jp coupe dead|10|
+Scion|xB|jp hatch wagon dead|15|toaster
+Scion|FR-S|jp coupe sport dead|8|frs
+BMW|M3|de sedan coupe sport|85|e30 m3,e36 m3,e46 m3,e92 m3,g80
+BMW|M5|de sedan sport lux v8 v10 hyb|52|
+BMW|3 Series|de sedan wagon lux classic|60|3series,328i,330i,335i,325i,320i,340i,e30,e36,e46,e90,f30,g20
+BMW|5 Series|de sedan wagon lux classic police|34|5series,528i,530i,535i,540i,550i,e39,e60
+BMW|7 Series|de sedan lux v8 v12 classic|30|7series,740i,750i,760li,750li
+BMW|X5|de suv lux v8|40|x5m
+BMW|X3|de suv lux|20|
+BMW|X6|de suv lux|10|
+BMW|X7|de suv lux v8|8|
+BMW|Z4|de conv sport|24|
+BMW|Z3|de conv coupe sport dead|15|
+BMW|Z8|de conv v8 dead film|10|
+BMW|i3|de hatch ev dead|24|
+BMW|i8|de coupe conv sport hyb door dead|34|
+BMW|i4|de sedan ev|10|
+BMW|iX|de suv ev|8|
+BMW|M2|de coupe sport|24|
+BMW|M4|de coupe conv sport|34|
+BMW|1 Series|de hatch|8|1series,m135i,135i,1m
+BMW|8 Series|de coupe conv lux v8 v12 popup|12|8series,850i,840i,m8,e31
+BMW|M1|de coupe super mid popup classic dead|10|
+BMW|2002|de sedan classic dead|12|2002tii
+BMW|Isetta|de classic dead cheap|15|bubble car
+Mercedes-Benz|G-Class|de suv off lux v8 classic|60|g wagon,gwagon,g wagen,g63,g500,g550,gelandewagen,g class,amg g63
+Mercedes-Benz|S-Class|de sedan lux v8 v12 classic|50|s class,s550,s500,s600,s63,s580
+Mercedes-Benz|C-Class|de sedan wagon lux|34|c class,c300,c63,c43
+Mercedes-Benz|E-Class|de sedan wagon lux taxi|30|e class,e350,e63,e300,w124
+Mercedes-Benz|SLS AMG|de coupe conv super sport v8 door dead|30|sls,sls black series
+Mercedes-Benz|300SL|de coupe conv sport classic dead door|26|300 sl,gullwing,300sl gullwing
+Mercedes-Benz|AMG GT|de coupe sport v8|20|amggt,gt black series,amg gt black series
+Mercedes-Benz|SL|de conv lux sport v8 v12 classic|20|sl500,sl550,sl55,sl63,sl600
+Mercedes-Benz|GLE|de suv lux|15|ml,ml350,m class,gle350,ml63
+Mercedes-Benz|Sprinter|de van|25|
+Mercedes-Benz|EQS|de sedan lux ev|10|
+Mercedes-Benz|CLS|de sedan lux|10|cls550,cls63
+Mercedes-Benz|SLK|de conv dead|12|slc,slk230,slk350
+Mercedes-Benz|SLR McLaren|de coupe conv super v8 door dead|15|slr,mclaren slr
+Mercedes-Benz|A-Class|de hatch sedan|8|a class,a45,a250
+Mercedes-Benz|GLS|de suv lux|6|
+Mercedes-Benz|Maybach S-Class|de sedan lux v12|20|maybach,maybach 57,maybach 62,mercedes maybach
+Mercedes-Benz|190E|de sedan dead|10|190,190 e,cosworth 190
+Mercedes-Benz|CLK GTR|de coupe super v12 mid dead|6|
+Mercedes-Benz|Unimog|de off classic|10|
+Mercedes-Benz|AMG One|de coupe super hyb mid|8|project one,mercedes amg one
+Porsche|911|de coupe conv sport classic|95|carrera,911 turbo,gt3,gt3 rs,gt2 rs,turbo s,930,964,993,996,997,992,911 carrera,targa,911 targa
+Porsche|Cayenne|de suv lux v8 hyb|44|
+Porsche|Macan|de suv lux ev|25|
+Porsche|Panamera|de sedan lux v8 hyb|30|
+Porsche|Taycan|de sedan wagon ev sport lux|34|
+Porsche|Boxster|de conv sport mid|35|718 boxster
+Porsche|Cayman|de coupe sport mid|30|718,718 cayman,cayman gt4,gt4
+Porsche|918 Spyder|de conv super hyb mid v8 dead|35|918
+Porsche|Carrera GT|de conv super v10 mid dead|35|cgt
+Porsche|944|de coupe sport popup dead|15|944 turbo
+Porsche|928|de coupe hatch v8 popup dead classic|12|
+Porsche|924|de coupe hatch popup dead classic|8|
+Porsche|959|de coupe super dead|15|
+Porsche|356|de coupe conv sport classic dead|20|356 speedster,speedster
+Porsche|914|de conv sport mid popup classic dead|8|
+Porsche|550 Spyder|de conv sport mid classic dead|10|550,little bastard
+Volkswagen|Beetle|de hatch coupe conv classic cheap animal dead film|90|bug,type 1,new beetle,kafer,fusca,vw bug,herbie,vocho
+Volkswagen|Golf|de hatch cheap hot classic|60|gti,golf gti,golf r,rabbit
+Volkswagen|Jetta|de sedan cheap classic|40|bora,vento,jetta gli,gli
+Volkswagen|Passat|de sedan wagon classic|25|
+Volkswagen|Bus|de van classic dead film|50|type 2,microbus,kombi,transporter,bulli,vw bus,vw van,hippie van,splitty,samba
+Volkswagen|ID. Buzz|de van ev|15|id buzz,buzz
+Volkswagen|ID.4|de suv ev|12|id4
+Volkswagen|Tiguan|de suv|20|
+Volkswagen|Touareg|de suv|12|
+Volkswagen|Atlas|de suv|12|teramont
+Volkswagen|Scirocco|de coupe hatch dead classic|10|
+Volkswagen|Karmann Ghia|de coupe conv classic dead|15|karmann,ghia
+Volkswagen|Thing|de conv off classic dead|8|type 181,kurierwagen
+Volkswagen|Phaeton|de sedan lux dead|6|
+Volkswagen|Corrado|de coupe hatch dead|8|
+Volkswagen|Polo|de hatch cheap hot classic|15|polo gti
+Volkswagen|Up!|de hatch cheap dead|5|up,eup,up gti
+Volkswagen|Amarok|de truck|6|
+Volkswagen|Vanagon|de van dead classic|8|t3,westfalia
+Audi|R8|de coupe conv super sport v10 mid dead film|68|r8 v10
+Audi|A4|de sedan wagon lux|40|b5,b8
+Audi|A6|de sedan wagon lux|20|
+Audi|A8|de sedan lux|15|
+Audi|Q5|de suv lux|25|sq5
+Audi|Q7|de suv lux|20|
+Audi|Q8|de suv lux|10|rsq8,sq8
+Audi|TT|de coupe conv sport dead|35|tt rs,ttrs
+Audi|RS6|de wagon sedan sport lux v8|30|rs6 avant,rs 6
+Audi|RS3|de sedan hatch sport|12|rs 3
+Audi|S4|de sedan wagon sport|15|
+Audi|A3|de hatch sedan|15|
+Audi|e-tron GT|de sedan ev sport lux|15|etron gt,rs etron gt
+Audi|Q8 e-tron|de suv ev lux|10|etron,e-tron,q8 etron
+Audi|Quattro|de coupe dead|15|ur quattro,sport quattro,urquattro
+Opel|GT|de coupe popup classic dead|4|opel gt
+Opel|Manta|de coupe animal classic dead|5|
+Opel|Corsa|de hatch cheap|6|vauxhall corsa
+Opel|Astra|de hatch|5|vauxhall astra
+Trabant|601|de hatch classic dead cheap|15|trabant,trabi,trabant 601,p601
+Smart|Fortwo|de hatch cheap|18|smart car,smart,for two
+Ford|Mustang|us coupe conv muscle v8 animal film classic|99|stang,mustang gt,boss 302,mach 1,bullitt,fox body,dark horse,mustang gtd,gtd
+Ford|F-150|us truck v8 off classic|90|f150,f 150,f series,f-series,f250,f-250,f350,super duty
+Ford|Model T|us classic dead cheap|60|model-t,tin lizzie
+Ford|GT|us coupe super sport mid v8 film dead|45|ford gt,gt40,gt 40
+Ford|Bronco|us suv off v8 animal classic|60|bronco raptor,early bronco
+Ford|Explorer|us suv police|45|police interceptor utility
+Ford|Focus|us hatch sedan cheap dead hot|35|focus rs,focus st
+Ford|Fiesta|us hatch cheap dead hot classic|30|fiesta st
+Ford|Crown Victoria|us sedan v8 police taxi dead|40|crown vic,crownvic,p71,police interceptor,cvpi
+Ford|Escape|us suv hyb taxi|25|kuga
+Ford|Ranger|us truck off|30|ranger raptor
+Ford|F-150 Raptor|us truck off v8 animal|30|raptor,f150 raptor,raptor r
+Ford|Thunderbird|us coupe conv v8 animal classic dead film|30|t-bird,tbird
+Ford|Model A|us classic dead|15|
+Ford|Pinto|us hatch sedan cheap classic dead animal|20|
+Ford|Taurus|us sedan police dead animal|24|taurus sho,sho
+Ford|Fusion|us sedan hyb dead|20|mondeo
+Ford|Edge|us suv|12|
+Ford|Expedition|us suv v8|15|
+Ford|Transit|us van classic|20|transit connect
+Ford|Maverick|us truck hyb cheap animal classic|25|
+Ford|Mustang Mach-E|us suv ev|25|mach e,mache
+Ford|F-150 Lightning|us truck ev dead|20|lightning,f150 lightning
+Ford|Excursion|us suv v8 v10 dead|8|
+Ford|Probe|us coupe hatch popup dead|8|
+Ford|Falcon|us au sedan coupe classic dead animal film|10|xb falcon,interceptor,mad max car
+Ford|Galaxie|us sedan v8 classic dead|8|galaxie 500
+Ford|Fairlane|us sedan v8 classic dead|8|
+Ford|Gran Torino|us coupe muscle v8 classic dead film place|15|torino
+Ford|Flex|us suv wagon dead|6|
+Ford|Escort|uk hatch sedan cheap hot dead classic|15|escort rs,escort cosworth
+Ford|Cortina|uk sedan classic dead|8|
+Ford|Capri|uk coupe hatch classic place|10|
+Ford|Sierra|uk hatch sedan dead|8|sierra cosworth,rs500
+Ford|Puma|uk suv animal|5|
+Chevrolet|Corvette|us coupe conv sport v8 popup mid classic|95|vette,stingray,c8,c7,c6,c5,c4,c3,c2,z06,zr1,corvette stingray,split window,e-ray
+Chevrolet|Camaro|us coupe conv muscle v8 dead film classic|85|zl1,camaro ss,camaro zl1,bumblebee,iroc,iroc-z,z28
+Chevrolet|Silverado|us truck v8 ev|65|silverado 1500,silverado ev
+Chevrolet|Impala|us sedan v8 animal police classic film dead|60|impala ss,67 impala
+Chevrolet|Tahoe|us suv v8 police place|50|
+Chevrolet|Suburban|us suv v8 classic|40|
+Chevrolet|Malibu|us sedan place dead classic|30|
+Chevrolet|Chevelle|us coupe muscle v8 classic dead|35|chevelle ss
+Chevrolet|Bel Air|us conv sedan coupe v8 classic dead place|35|belair,57 chevy,1957 chevy,tri five
+Chevrolet|Bolt|us hatch suv ev cheap|25|bolt ev,bolt euv
+Chevrolet|Volt|us hatch hyb dead|20|
+Chevrolet|Cruze|us sedan hatch cheap dead|15|
+Chevrolet|Equinox|us suv ev|20|equinox ev
+Chevrolet|Colorado|us truck off place|20|zr2
+Chevrolet|Nova|us sedan coupe muscle v8 classic dead|25|chevy ii,nova ss
+Chevrolet|El Camino|us truck muscle v8 classic dead|30|elcamino
+Chevrolet|Monte Carlo|us coupe v8 place dead classic|20|montecarlo,monte carlo ss
+Chevrolet|Caprice|us sedan wagon v8 police taxi dead classic|20|caprice classic,box chevy,donk
+Chevrolet|Corvair|us coupe sedan classic dead|15|
+Chevrolet|Spark|us hatch cheap dead|10|
+Chevrolet|Blazer|us suv off classic|20|k5 blazer,k5,blazer ev
+Chevrolet|Trailblazer|us suv|10|
+Chevrolet|Astro|us van dead|8|astro van
+Chevrolet|Cobalt|us sedan coupe cheap dead|12|cobalt ss
+Chevrolet|Cavalier|us sedan coupe cheap dead|15|
+Chevrolet|HHR|us wagon dead|8|
+Chevrolet|SSR|us truck conv v8 dead|5|
+Chevrolet|Avalanche|us truck v8 dead|10|
+Chevrolet|Trax|us suv cheap|12|
+Chevrolet|Express|us van v8|6|chevy van,express van
+Dodge|Charger|us sedan coupe muscle v8 police film classic|85|hellcat,general lee,charger hellcat,charger srt,charger daytona,69 charger
+Dodge|Challenger|us coupe muscle v8 dead film classic|75|demon,challenger hellcat,srt demon,challenger srt,redeye
+Dodge|Viper|us conv coupe super sport v10 animal dead|70|srt viper,viper acr,srt-10
+Dodge|Durango|us suv v8 police place|30|durango srt
+Dodge|Grand Caravan|us van|35|caravan,dodge caravan
+Ram|1500|us truck v8 animal|70|ram,dodge ram,ram 1500,trx,ram trx,ram 2500,ram truck
+Dodge|Neon|us sedan coupe cheap dead|25|srt-4,srt4
+Dodge|Dart|us sedan cheap dead classic|15|
+Dodge|Coronet|us sedan muscle v8 classic dead|10|
+Dodge|Super Bee|us coupe muscle v8 classic dead animal|10|superbee
+Dodge|Stealth|us coupe hatch popup dead|8|
+Dodge|Magnum|us wagon v8 dead|12|magnum srt8
+Dodge|Journey|us suv dead|10|
+Dodge|Nitro|us suv dead|6|
+Dodge|Dakota|us truck dead place|10|
+Dodge|Hornet|us suv hyb animal|5|
+Plymouth|Barracuda|us coupe conv muscle v8 classic dead animal|25|cuda,hemi cuda
+Plymouth|Road Runner|us coupe muscle v8 classic dead animal|20|roadrunner,superbird
+Plymouth|Prowler|us conv dead|10|
+Plymouth|Fury|us sedan coupe v8 classic dead film police|15|christine
+Plymouth|Duster|us coupe muscle classic dead|6|
+Plymouth|Voyager|us van dead|6|grand voyager
+Pontiac|GTO|us coupe conv muscle v8 classic dead|45|goat,the judge
+Pontiac|Firebird|us coupe conv muscle v8 popup animal classic dead film|50|trans am,transam,kitt,firebird trans am
+Pontiac|Aztek|us suv dead film|30|aztec
+Pontiac|Fiero|us coupe mid popup dead|20|
+Pontiac|Grand Prix|us coupe sedan classic dead|10|grandprix
+Pontiac|Solstice|us conv dead|8|
+Pontiac|G8|us sedan v8 dead|6|g8 gt
+Pontiac|Bonneville|us sedan v8 classic dead place|8|
+Pontiac|Vibe|us hatch wagon dead|6|
+Pontiac|Sunfire|us coupe sedan cheap dead|6|
+Cadillac|Escalade|us suv lux v8|70|escalade esv,escalade iq
+Cadillac|Eldorado|us coupe conv lux v8 classic dead place|30|eldorado biarritz
+Cadillac|DeVille|us sedan coupe lux v8 classic dead|25|coupe deville,sedan deville,de ville
+Cadillac|CTS|us sedan lux dead|15|cts-v,ctsv
+Cadillac|Lyriq|us suv ev lux|6|
+Cadillac|Fleetwood|us sedan lux v8 classic dead place|12|fleetwood brougham
+Cadillac|Seville|us sedan lux classic dead place|8|
+Cadillac|Celestiq|us sedan ev lux|3|
+Cadillac|Ecto-1|us wagon classic dead film|8|ecto 1,ghostbusters car,miller meteor
+Lincoln|Navigator|us suv lux v8|30|
+Lincoln|Continental|us sedan conv lux v8 classic dead|25|
+Lincoln|Town Car|us sedan lux v8 dead taxi|25|towncar
+Lincoln|MKZ|us sedan lux hyb dead|6|
+Lincoln|Aviator|us suv lux hyb|8|
+Buick|Grand National|us coupe muscle dead|20|gnx,regal grand national
+Buick|Riviera|us coupe lux v8 classic dead place|12|
+Buick|Regal|us sedan coupe classic dead|8|
+Buick|Enclave|us suv|8|
+Buick|LeSabre|us sedan classic dead|10|le sabre
+Buick|Roadmaster|us wagon sedan v8 classic dead|10|roadmaster estate
+Buick|Skylark|us sedan coupe classic dead animal|8|
+GMC|Sierra|us truck v8 place|30|sierra 1500,sierra denali,denali
+GMC|Yukon|us suv v8 place|30|yukon denali
+GMC|Hummer EV|us truck suv ev off|20|gmc hummer,hummer ev
+GMC|Syclone|us truck dead|5|
+Hummer|H1|us suv off v8 dead|35|humvee,hummer,hummer h1,hmmwv
+Hummer|H2|us suv off v8 dead|30|hummer h2
+Hummer|H3|us suv off dead|10|hummer h3
+Jeep|Wrangler|us suv conv off classic|85|cj,jeep cj,cj5,cj7,rubicon,yj,tj,jk,jl,wrangler rubicon
+Jeep|Grand Cherokee|us suv off v8|50|trackhawk,grand cherokee srt
+Jeep|Cherokee|us suv off classic|40|xj,cherokee xj
+Jeep|Gladiator|us truck off conv|25|
+Jeep|Compass|us suv cheap|15|
+Jeep|Renegade|us suv|15|
+Jeep|Wagoneer|us suv v8 lux classic|20|grand wagoneer,wagoneer s
+Jeep|Willys MB|us suv off conv classic dead film|25|willys,willys jeep,mb,ford gpw,gpw,army jeep
+Jeep|Liberty|us suv dead|10|
+Jeep|Patriot|us suv dead|6|
+Jeep|Commander|us suv dead|5|
+Tesla|Model S|us sedan ev lux sport|75|models,plaid,model s plaid
+Tesla|Model 3|us sedan ev|85|model3
+Tesla|Model X|us suv ev door lux|55|modelx
+Tesla|Model Y|us suv ev|65|modely
+Tesla|Cybertruck|us truck ev|70|cyber truck
+Tesla|Roadster|us conv ev sport|35|tesla roadster
+Tesla|Semi|us ev|10|tesla semi
+Tesla|Cybercab|us ev taxi|8|robotaxi
+Rivian|R1T|us truck ev off|30|
+Rivian|R1S|us suv ev off|15|
+Rivian|R2|us suv ev|6|
+Lucid|Air|us sedan ev lux|15|lucid air,lucid
+Lucid|Gravity|us suv ev lux|5|
+Fisker|Karma|us sedan hyb dead lux|10|fisker karma
+Fisker|Ocean|us suv ev dead|8|fisker ocean
+DeLorean|DMC-12|us uk coupe door dead film|75|delorean,dmc12,dmc 12,dmc,back to the future,time machine
+Shelby|Cobra|us uk conv sport v8 classic dead animal|50|ac cobra,shelby cobra,427 cobra,289 cobra
+Shelby|GT500|us coupe muscle v8 film classic|35|eleanor,shelby gt500,gt350,shelby gt350,shelby mustang
+Saleen|S7|us coupe super mid v8 door dead|15|saleen
+SSC|Tuatara|us coupe super mid v8 animal|10|ssc tuatara
+SSC|Ultimate Aero|us coupe super mid v8 door dead|8|
+Hennessey|Venom F5|us coupe super mid v8|10|venom,f5,venom gt
+Chrysler|300|us sedan wagon v8 lux dead|30|300c,300 srt8
+Chrysler|PT Cruiser|us wagon hatch conv dead|35|pt,ptcruiser
+Chrysler|Pacifica|us van hyb|20|
+Chrysler|Crossfire|us coupe conv dead|10|
+Chrysler|Town & Country|us van dead|12|town and country
+Chrysler|Sebring|us conv sedan dead place|10|
+Chrysler|New Yorker|us sedan classic dead place|8|newyorker
+AMC|Gremlin|us hatch classic dead cheap|15|
+AMC|Pacer|us hatch wagon classic dead film|15|
+AMC|Javelin|us coupe muscle v8 classic dead|8|
+AMC|AMX|us coupe muscle v8 classic dead|6|
+AMC|Eagle|us wagon sedan dead animal off|6|
+Oldsmobile|Cutlass|us coupe sedan v8 classic dead|20|cutlass supreme
+Oldsmobile|442|us coupe muscle v8 classic dead|8|4-4-2,olds 442
+Oldsmobile|Toronado|us coupe lux v8 classic dead|6|
+Oldsmobile|Delta 88|us sedan v8 classic dead|8|delta eighty eight,88
+Oldsmobile|Alero|us sedan coupe dead|5|
+Mercury|Cougar|us coupe v8 animal classic dead|15|
+Mercury|Grand Marquis|us sedan v8 dead taxi|12|marquis
+Mercury|Sable|us sedan wagon dead animal|5|
+Mercury|Marauder|us sedan v8 dead|5|
+Mercury|Monterey|us sedan van classic dead place|3|
+Studebaker|Avanti|us coupe classic dead|6|
+Studebaker|Champion|us sedan classic dead|3|
+Tucker|48|us sedan classic dead|10|tucker,tucker torpedo,torpedo
+Duesenberg|Model J|us lux classic dead|8|duesenberg,duesy
+Checker|Marathon|us sedan taxi classic dead|12|checker,checker cab
+Cord|810|us sedan lux classic dead popup|4|cord,cord 812
+Saturn|Sky|us conv dead|6|saturn sky
+Saturn|Ion|us sedan coupe cheap dead|5|
+Saturn|Vue|us suv dead|5|
+Bricklin|SV-1|us coupe door dead|4|bricklin
+Ferrari|Enzo|it coupe super sport v12 mid door dead|50|enzo ferrari
+Ferrari|LaFerrari|it coupe super sport v12 hyb mid door dead|50|la ferrari
+Ferrari|F40|it coupe super sport v8 mid popup dead|55|
+Ferrari|F50|it conv super sport v12 mid dead|25|
+Ferrari|Testarossa|it coupe super sport v12 mid popup dead film|35|512 tr,512tr
+Ferrari|458 Italia|it coupe conv super sport v8 mid dead place|40|458,458 speciale,458 spider
+Ferrari|488|it coupe conv super sport v8 mid dead|25|488 gtb,488 pista,pista
+Ferrari|F8 Tributo|it coupe super sport v8 mid dead|15|f8,f8 spider
+Ferrari|SF90|it coupe conv super sport v8 hyb mid|20|sf90 stradale
+Ferrari|812 Superfast|it coupe super sport v12 dead|15|812,812 competizione
+Ferrari|296 GTB|it coupe super sport hyb mid|10|296,296 gts
+Ferrari|Roma|it coupe sport v8 place|15|
+Ferrari|Purosangue|it suv lux v12|10|
+Ferrari|250 GTO|it coupe sport classic v12 dead|25|250,250 gt,ferrari gto
+Ferrari|California|it conv sport v8 place dead film|12|california t,250 gt california,250 california
+Ferrari|F12berlinetta|it coupe super sport v12 dead|12|f12,f12 berlinetta,f12tdf
+Ferrari|360 Modena|it coupe conv super sport v8 mid dead place|15|360,360 spider,challenge stradale
+Ferrari|F430|it coupe conv super sport v8 mid dead|20|430,f430 scuderia,430 scuderia
+Ferrari|308 GTB|it coupe sport v8 mid popup dead film classic|15|308,308 gts,328
+Ferrari|Dino 246|it coupe sport mid classic dead|12|dino,246 gt,246 gts
+Ferrari|599 GTB|it coupe super sport v12 dead|8|599,599 fiorano,599 gto
+Ferrari|365 GTB/4 Daytona|it coupe sport v12 classic dead place popup|12|daytona,365 daytona,365 gtb4
+Ferrari|Monza SP1|it conv super sport v12 dead place|5|monza,monza sp2,monza sp
+Ferrari|12Cilindri|it coupe sport v12|5|12 cilindri,dodici cilindri
+Ferrari|Portofino|it conv sport v8 place|8|portofino m
+Ferrari|F80|it coupe super hyb mid door|8|
+Lamborghini|Aventador|it coupe conv super sport v12 mid door dead|60|aventador svj,svj,aventador s
+Lamborghini|Huracán|it coupe conv super sport v10 mid police dead|55|huracan,huracan sto,sto,huracan evo,performante,sterrato
+Lamborghini|Countach|it coupe super sport v12 mid door popup dead classic|50|countach lp400,lp400
+Lamborghini|Urus|it suv lux super v8 animal|45|urus performante
+Lamborghini|Murciélago|it coupe conv super sport v12 mid door dead animal|30|murcielago,lp640
+Lamborghini|Diablo|it coupe conv super sport v12 mid door popup dead|30|diablo sv,diablo vt
+Lamborghini|Gallardo|it coupe conv super sport v10 mid dead police|30|gallardo superleggera
+Lamborghini|Miura|it coupe super sport v12 mid classic dead popup|25|miura sv,p400
+Lamborghini|Revuelto|it coupe super sport v12 hyb mid door|15|
+Lamborghini|Reventón|it coupe conv super v12 mid door dead|8|reventon
+Lamborghini|Sesto Elemento|it coupe super v10 mid dead|6|sesto
+Lamborghini|LM002|it suv off v12 dead|12|lm 002,rambo lambo
+Lamborghini|Veneno|it coupe conv super v12 mid door dead|15|
+Lamborghini|Sián|it coupe conv super v12 hyb mid door dead|5|sian
+Lamborghini|Espada|it coupe v12 classic dead|4|
+Lamborghini|Jalpa|it conv coupe v8 mid popup dead|4|
+Lamborghini|Urraco|it coupe v8 mid classic dead|3|
+Lamborghini|Temerario|it coupe super sport v8 hyb mid|6|
+Maserati|MC20|it coupe conv super sport mid door|15|mc 20
+Maserati|GranTurismo|it coupe conv sport v8 lux|15|gran turismo,grancabrio
+Maserati|Quattroporte|it sedan lux v8 classic|15|quattro porte
+Maserati|Ghibli|it sedan lux classic dead|12|
+Maserati|Levante|it suv lux|10|
+Maserati|Bora|it coupe sport mid v8 popup classic dead|4|
+Maserati|MC12|it coupe super v12 mid door dead|10|mc 12
+Maserati|Merak|it coupe mid popup classic dead|3|
+Maserati|Grecale|it suv lux|3|
+Alfa Romeo|Giulia|it sedan sport lux police classic|25|giulia quadrifoglio,quadrifoglio,giulia gtv,gtv
+Alfa Romeo|Stelvio|it suv lux place|12|
+Alfa Romeo|4C|it coupe conv sport mid dead|20|4c spider
+Alfa Romeo|Spider|it conv sport classic dead film|15|duetto,alfa spider,spider duetto
+Alfa Romeo|Giulietta|it hatch dead classic|8|
+Alfa Romeo|8C Competizione|it coupe conv sport v8 dead|10|8c,8c spider
+Alfa Romeo|Tonale|it suv hyb|5|
+Alfa Romeo|Montreal|it coupe v8 classic dead place|5|
+Alfa Romeo|Brera|it coupe dead place|5|
+Alfa Romeo|33 Stradale|it coupe sport mid v8 classic|6|33,tipo 33
+Alfa Romeo|Junior|it suv ev|3|
+Fiat|500|it hatch conv cheap classic hot ev|60|cinquecento,fiat 500,500e,abarth,500 abarth,abarth 595,nuova 500
+Fiat|Panda|it hatch cheap animal off|25|panda 4x4
+Fiat|Multipla|it van dead|15|
+Fiat|Uno|it hatch cheap dead|10|
+Fiat|Punto|it hatch cheap dead|8|grande punto
+Fiat|124 Spider|it conv sport classic dead|15|124,124 spider,abarth 124,124 sport spider
+Fiat|X1/9|it conv sport mid popup classic dead|8|x19,x 1/9
+Fiat|Topolino|it hatch classic cheap animal ev|6|500 topolino
+Fiat|Strada|it truck cheap|4|
+Pagani|Zonda|it coupe conv super sport v12 mid dead|35|zonda r,zonda cinque
+Pagani|Huayra|it coupe conv super sport v12 mid door|30|huayra bc
+Pagani|Utopia|it coupe super v12 mid door|10|
+Lancia|Stratos|it coupe sport mid classic dead|20|stratos hf
+Lancia|Delta Integrale|it hatch sport hot dead classic|20|delta,integrale,delta hf,delta hf integrale,lancia delta
+Lancia|037|it coupe sport mid dead|8|rally 037,lancia rally
+Lancia|Ypsilon|it hatch cheap|4|
+Lancia|Fulvia|it coupe sedan classic dead|4|
+De Tomaso|Pantera|it coupe sport mid v8 popup classic dead animal|15|pantera
+De Tomaso|Mangusta|it coupe sport mid v8 classic dead animal|5|mangusta
+Iso|Grifo|it coupe v8 classic dead|3|iso grifo
+Bugatti|Veyron|fr coupe conv super sport mid dead|75|veyron super sport,bugatti veyron
+Bugatti|Chiron|fr coupe super sport mid dead|70|chiron super sport
+Bugatti|Divo|fr coupe super sport mid dead|10|
+Bugatti|Type 35|fr conv sport classic dead|8|type35
+Bugatti|Bolide|fr coupe super mid|8|
+Bugatti|Tourbillon|fr coupe super hyb mid|8|
+Bugatti|EB110|it fr coupe super sport v12 mid door dead|10|eb 110,eb110 ss
+Bugatti|La Voiture Noire|fr coupe super mid dead|6|voiture noire
+Mini|Cooper|uk hatch conv cheap hot classic film|70|mini,mini cooper,cooper s,mini cooper s,austin mini,morris mini,classic mini,jcw,john cooper works
+Mini|Countryman|uk suv|10|mini countryman
+Mini|Moke|uk conv classic dead off|6|mini moke,moke
+Aston Martin|DB5|uk coupe sport classic dead film|50|db 5,james bond car,bond car
+Aston Martin|DB11|uk coupe conv sport lux v12 v8 dead|20|db 11
+Aston Martin|DB12|uk coupe conv sport lux v8|10|db 12
+Aston Martin|DB9|uk coupe conv sport lux v12 dead|20|db 9
+Aston Martin|Vantage|uk coupe conv sport v8 classic|25|v8 vantage,v12 vantage
+Aston Martin|DBS|uk coupe sport lux v12 film|15|dbs superleggera
+Aston Martin|Valkyrie|uk coupe super sport v12 hyb mid door|20|
+Aston Martin|Vanquish|uk coupe sport v12 lux film|15|v12 vanquish
+Aston Martin|DBX|uk suv lux v8|10|dbx707
+Aston Martin|Lagonda|uk sedan lux v8 classic dead|6|lagonda taraf
+Aston Martin|Rapide|uk sedan lux v12 dead|6|
+Aston Martin|One-77|uk coupe super v12 dead|6|one77
+Aston Martin|Valhalla|uk coupe super hyb v8 mid door|6|
+Jaguar|E-Type|uk coupe conv sport classic dead v12|45|etype,xke,xk-e
+Jaguar|F-Type|uk coupe conv sport v8 dead|30|ftype,f-type r
+Jaguar|XJ|uk sedan lux v12 v8 classic dead|20|xj6,xj8,xj12,xjr
+Jaguar|XJS|uk coupe conv lux v12 classic dead|10|xj-s
+Jaguar|XK|uk coupe conv lux v8 dead|10|xk8,xkr
+Jaguar|XK120|uk conv sport classic dead|6|xk 120,xk140,xk150
+Jaguar|XJ220|uk coupe super sport mid dead|15|xj 220
+Jaguar|I-Pace|uk suv ev dead|12|ipace
+Jaguar|F-Pace|uk suv dead|10|fpace
+Jaguar|D-Type|uk conv sport classic dead|6|dtype
+Jaguar|S-Type|uk sedan dead|6|stype
+Jaguar|Mark 2|uk sedan classic dead film|6|mk2,mark ii,mk ii
+Land Rover|Defender|uk suv off|55|defender 90,defender 110
+Land Rover|Range Rover|uk suv lux off v8 classic|70|rangerover,range rover sport,range rover classic,range rover velar,velar
+Land Rover|Discovery|uk suv off|25|disco,discovery sport,lr3,lr4
+Land Rover|Range Rover Evoque|uk suv|15|evoque
+Land Rover|Series|uk suv off classic dead|10|series 1,series 2,series 3,series iii,series i,land rover series,series iia
+Rolls-Royce|Phantom|uk sedan lux v12 classic|35|
+Rolls-Royce|Ghost|uk sedan lux v12|30|
+Rolls-Royce|Cullinan|uk suv lux v12|30|
+Rolls-Royce|Wraith|uk coupe lux v12 dead|20|
+Rolls-Royce|Silver Shadow|uk sedan lux v8 classic dead|12|
+Rolls-Royce|Silver Ghost|uk lux classic dead|10|
+Rolls-Royce|Spectre|uk coupe lux ev|12|
+Rolls-Royce|Dawn|uk conv lux v12 dead|10|
+Rolls-Royce|Corniche|uk conv lux v8 classic dead|5|
+Bentley|Continental GT|uk coupe conv lux sport|40|conti gt,bentley continental,gtc,continental gtc
+Bentley|Bentayga|uk suv lux|20|
+Bentley|Flying Spur|uk sedan lux|15|flyingspur,continental flying spur
+Bentley|Mulsanne|uk sedan lux v8 dead place|10|
+Bentley|Blower|uk conv lux classic dead|4|blower bentley,4 1/2 litre
+McLaren|F1|uk coupe super sport v12 mid door dead|50|mclaren f1
+McLaren|P1|uk coupe super sport v8 hyb mid door dead|40|
+McLaren|720S|uk coupe conv super sport v8 mid door dead|30|720
+McLaren|570S|uk coupe conv super sport v8 mid door dead|15|570,570gt
+McLaren|Senna|uk coupe super sport v8 mid door dead|30|mclaren senna,senna gtr
+McLaren|765LT|uk coupe conv super sport v8 mid door dead|10|765,765 lt
+McLaren|Artura|uk coupe conv super sport hyb mid door|10|
+McLaren|Speedtail|uk coupe super hyb mid door dead|10|
+McLaren|12C|uk coupe conv super sport v8 mid door dead|12|mp4-12c,mp412c
+McLaren|Elva|uk conv super sport v8 mid dead|5|
+McLaren|W1|uk coupe super hyb v8 mid door|6|
+McLaren|750S|uk coupe conv super sport v8 mid door|6|750
+Lotus|Elise|uk conv sport mid dead|35|
+Lotus|Exige|uk coupe sport mid dead|20|
+Lotus|Esprit|uk coupe sport mid popup dead film classic|30|esprit turbo,esprit v8,wet nellie
+Lotus|Evora|uk coupe sport mid dead|15|
+Lotus|Emira|uk coupe sport mid|12|
+Lotus|Evija|uk coupe super ev mid|10|
+Lotus|Seven|uk conv sport classic dead|10|lotus 7,lotus seven
+Lotus|Elan|uk conv coupe sport popup classic dead|8|
+Lotus|Eletre|uk suv ev lux|5|
+Caterham|Seven|uk conv sport|15|caterham 7,caterham,super seven
+MG|MGB|uk conv coupe sport classic dead|20|mg b,mgb gt
+MG|Midget|uk conv sport classic dead|10|mg midget
+MG|TD|uk conv classic dead|5|mg td,mgtd,mg tc
+MG|MG4|uk hatch ev cheap|8|mg 4
+Triumph|Spitfire|uk conv sport classic dead|15|
+Triumph|TR6|uk conv sport classic dead|12|tr 6
+Triumph|TR7|uk coupe conv sport popup classic dead|8|tr 7
+Triumph|Stag|uk conv v8 classic dead animal|8|
+Austin-Healey|3000|uk conv sport classic dead|10|big healey,healey 3000,austin healey 3000
+Austin-Healey|Sprite|uk conv sport classic dead|8|frogeye,frogeye sprite,bugeye sprite
+Austin|Allegro|uk sedan hatch dead classic|5|
+Austin|Metro|uk hatch cheap dead|5|mini metro
+Morris|Minor|uk sedan wagon classic dead cheap|10|morris minor,moggy
+Morris|Marina|uk sedan classic dead|4|
+Reliant|Robin|uk hatch cheap dead animal film classic|20|reliant robin,regal,reliant regal
+TVR|Griffith|uk conv sport v8|8|tvr griffith
+TVR|Cerbera|uk coupe sport v8 dead|6|
+Ariel|Atom|uk conv sport|12|ariel atom
+Gordon Murray|T.50|uk coupe super sport v12 mid door|8|t50,gma t50
+LEVC|TX (Black Cab)|uk van taxi ev hyb|10|black cab,fx4,tx4,london taxi,hackney carriage,london cab,austin fx4,tx
+Morgan|Plus Four|uk conv sport classic|8|plus 4,morgan,morgan plus four,plus 8
+Noble|M600|uk coupe super sport mid v8|4|
+Hyundai|Elantra|kr sedan cheap hot|35|elantra n,avante
+Hyundai|Sonata|kr sedan hyb taxi|30|
+Hyundai|Tucson|kr suv hyb place|30|
+Hyundai|Santa Fe|kr suv hyb place|25|santafe
+Hyundai|Ioniq 5|kr suv hatch ev|35|ioniq5,ioniq 5 n,ioniq
+Hyundai|Ioniq 6|kr sedan ev|15|ioniq6
+Hyundai|Kona|kr suv ev place|20|kona electric,kona n
+Hyundai|Palisade|kr suv place|15|
+Hyundai|Veloster|kr hatch sport hot dead|15|veloster n,veloster turbo
+Hyundai|Genesis Coupe|kr coupe sport dead|10|
+Hyundai|Accent|kr sedan hatch cheap dead|15|
+Hyundai|Santa Cruz|kr truck place|12|santacruz
+Hyundai|Pony|kr hatch sedan classic dead animal cheap|6|hyundai pony
+Hyundai|i30 N|kr hatch hot|6|i30,i30n
+Kia|Soul|kr hatch ev cheap|30|soul ev
+Kia|Telluride|kr suv place|25|
+Kia|Sorento|kr suv hyb place|15|
+Kia|Sportage|kr suv hyb|15|
+Kia|K5|kr sedan|15|optima
+Kia|Stinger|kr sedan sport dead|25|stinger gt
+Kia|EV6|kr suv hatch ev|20|ev6 gt
+Kia|EV9|kr suv ev|12|
+Kia|Forte|kr sedan cheap|12|k4,cerato
+Kia|Rio|kr sedan hatch cheap dead place|10|
+Kia|Carnival|kr van|10|sedona
+Kia|Niro|kr suv hyb ev|10|niro ev
+Genesis|G70|kr sedan lux sport|10|
+Genesis|G90|kr sedan lux|8|
+Genesis|GV80|kr suv lux|8|
+Genesis|G80|kr sedan lux ev|7|
+Volvo|240|se wagon sedan classic dead|35|240 wagon,240dl,volvo brick,brick,245,244
+Volvo|XC90|se suv lux hyb|40|
+Volvo|XC60|se suv lux hyb|20|
+Volvo|XC40|se suv ev|12|ex40
+Volvo|V70|se wagon police dead|10|v70r
+Volvo|S60|se sedan|12|
+Volvo|P1800|se coupe wagon sport classic dead film|15|p 1800,1800,1800es
+Volvo|Amazon|se sedan wagon classic dead|8|122,122s
+Volvo|850|se wagon sedan dead|10|850r,t5r,850 t5r
+Volvo|EX30|se suv ev cheap|8|
+Volvo|740|se wagon sedan dead|8|740 turbo,760,940
+Volvo|C30|se hatch dead|8|
+Volvo|EX90|se suv ev lux|6|
+Saab|900|se hatch conv coupe dead classic|25|saab 900,900 turbo,classic 900
+Saab|9-3|se sedan conv wagon dead|15|93,saab 93
+Saab|9-5|se sedan wagon dead|10|95,saab 95
+Saab|96|se sedan classic dead|6|saab 96
+Saab|Sonett|se coupe popup classic dead|4|sonett iii
+Koenigsegg|Agera|se coupe super sport v8 mid door dead|30|agera r,agera rs
+Koenigsegg|Jesko|se coupe super sport v8 mid door|30|jesko absolut
+Koenigsegg|Regera|se coupe super v8 hyb mid door|20|
+Koenigsegg|One:1|se coupe super v8 mid door dead|12|one1,one 1
+Koenigsegg|CCX|se coupe super v8 mid door dead|10|ccxr,cc8s
+Koenigsegg|Gemera|se coupe super hyb mid door|10|
+Koenigsegg|CC850|se coupe super v8 mid door|5|
+Polestar|2|se sedan ev|15|polestar 2,polestar
+Polestar|1|se coupe hyb dead|5|polestar 1
+Polestar|3|se suv ev|5|polestar 3
+Peugeot|205|fr hatch cheap hot dead|20|205 gti,205 t16
+Peugeot|206|fr hatch conv cheap dead|15|206 cc
+Peugeot|208|fr hatch cheap ev|12|e-208,208 gti
+Peugeot|306|fr hatch dead|8|306 gti
+Peugeot|405|fr sedan wagon dead|6|
+Peugeot|504|fr sedan wagon truck classic dead|10|504 pickup
+Peugeot|406|fr sedan dead taxi film|6|406 taxi
+Peugeot|3008|fr suv hyb|8|
+Peugeot|2008|fr suv|5|
+Renault|Clio|fr hatch cheap hot|25|clio rs,clio v6,lutecia
+Renault|Twingo|fr hatch cheap ev|10|
+Renault|5|fr hatch ev cheap classic hot|15|r5,renault 5,5 turbo,le car,r5 turbo
+Renault|Mégane|fr hatch hot|12|megane,megane rs,megane r26
+Renault|Espace|fr van suv|8|
+Alpine|A110|fr coupe sport mid classic|20|alpine,renault alpine,alpine a110
+Renault|Kangoo|fr van|5|
+Renault|Zoe|fr hatch ev dead|8|
+Renault|4|fr hatch classic cheap ev|6|4l,renault 4,r4
+Renault|Dauphine|fr sedan classic dead cheap|5|
+Renault|Avantime|fr coupe van dead|3|
+Citroën|2CV|fr hatch conv classic cheap dead|35|2 cv,deux chevaux,tin snail
+Citroën|DS|fr sedan classic dead|20|ds19,ds 19,ds21,ds 21,deesse
+Citroën|SM|fr coupe classic dead|6|citroen sm
+Citroën|H Van|fr van classic dead|6|type h,hy,hy van
+Citroën|Méhari|fr conv off classic dead|5|mehari
+Citroën|Ami|fr ev cheap|8|citroen ami
+Citroën|C4|fr hatch|6|c4 cactus,cactus
+Citroën|Berlingo|fr van|6|
+Citroën|Xsara Picasso|fr van dead|5|picasso,xsara
+Citroën|CX|fr sedan wagon classic dead|4|citroen cx
+BYD|Seal|cn sedan ev animal|10|byd seal
+BYD|Dolphin|cn hatch ev cheap animal|8|byd dolphin
+BYD|Atto 3|cn suv ev|6|atto3,yuan plus
+BYD|Seagull|cn hatch ev cheap animal|6|byd seagull,dolphin mini
+BYD|Han|cn sedan ev|5|byd han
+BYD|Shark|cn truck hyb animal|4|byd shark
+Xiaomi|SU7|cn sedan ev sport|10|su 7
+Xiaomi|YU7|cn suv ev|5|
+Wuling|Hongguang Mini EV|cn hatch ev cheap|5|mini ev,hongguang
+NIO|ET7|cn sedan ev lux|3|nio et7
+Zeekr|001|cn wagon ev|4|zeekr 001,zeekr
+Škoda|Octavia|cz sedan wagon taxi cheap|10|octavia rs,vrs
+Škoda|Fabia|cz hatch cheap|5|
+SEAT|Ibiza|es hatch cheap place|8|seat ibiza
+SEAT|León|es hatch hot place|5|leon,cupra leon
+Tata|Nano|in hatch cheap dead|15|tata nano
+Mahindra|Thar|in suv off|8|mahindra thar
+Holden|Commodore|au sedan wagon v8 dead police|12|vf commodore,ss commodore
+Holden|Monaro|au coupe v8 dead classic place|6|
+Holden|Ute|au truck v8 dead|6|holden ute,commodore ute,maloo
+Lada|Niva|ru suv off cheap classic|12|lada niva,niva legend
+Lada|Riva|ru sedan wagon classic cheap dead|6|2107,2105,2101,zhiguli,lada 2107
+Yugo|GV|rs hatch cheap dead|15|yugo,yugo gv,koral,yugo 45
+`;
+
+const MAKE_AL = {
+  'Chevrolet': ['chevy'], 'Volkswagen': ['vw'], 'Mercedes-Benz': ['mercedes', 'benz', 'merc', 'mercedes amg', 'amg'],
+  'Lamborghini': ['lambo'], 'Alfa Romeo': ['alfa'], 'Aston Martin': ['aston'], 'Rolls-Royce': ['rolls', 'rolls royce'],
+  'Cadillac': ['caddy'], 'Land Rover': ['landrover'], 'Austin-Healey': ['healey'], 'De Tomaso': ['detomaso'],
+  'Oldsmobile': ['olds'], 'Gordon Murray': ['gma'], 'Ram': ['dodge'], 'Mitsubishi': ['mitsu']
+};
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/&/g, 'and').replace(/[^a-z0-9]/g, '');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+function hash(s) { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shuffle(a, r = Math.random) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const pick = (a, r = Math.random) => a[Math.floor(r() * a.length)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- build the garage + answer index ---------- */
+const CARS = RAW.trim().split('\n').map((line, i) => {
+  const [make, model, tags, pop, al = ''] = line.split('|');
+  return { i, make, model, name: make + ' ' + model, tags: new Set(tags.trim().split(/\s+/)), pop: +pop, al: al ? al.split(',') : [] };
+});
+const IDX = new Map();
+const MAKES = new Set();
+function addKey(k, c) {
+  if (!k || k.length < 2) return;
+  let a = IDX.get(k); if (!a) IDX.set(k, a = []);
+  if (!a.includes(c)) a.push(c);
+}
+for (const c of CARS) {
+  const makes = [c.make, ...(MAKE_AL[c.make] || [])];
+  makes.forEach(m => MAKES.add(norm(m)));
+  for (const nm of [c.model, ...c.al]) {
+    addKey(norm(nm), c);
+    for (const m of makes) addKey(norm(m + nm), c);
+  }
+}
+function lev(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]; let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (cur[j] < rowMin) rowMin = cur[j];
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function fuzzy(k) {
+  if (k.length < 5) return null;
+  const max = k.length >= 8 ? 2 : 1;
+  let best = max + 1, out = [];
+  for (const [key, arr] of IDX) {
+    if (key.length < 4) continue;
+    const d = lev(k, key, max);
+    if (d < best) { best = d; out = arr.slice(); }
+    else if (d === best && d <= max) arr.forEach(c => out.includes(c) || out.push(c));
+  }
+  return best <= max ? out : null;
+}
+function match(input, p) {
+  const k = norm(input);
+  if (!k) return { t: 'empty' };
+  let cands = IDX.get(k);
+  if (!cands) {
+    if (MAKES.has(k)) return { t: 'brand' };
+    cands = fuzzy(k);
+  }
+  if (!cands || !cands.length) return { t: 'unknown' };
+  const fit = cands.filter(p.test).sort((a, b) => b.pop - a.pop);
+  if (fit.length) return { t: 'ok', car: fit[0] };
+  return { t: 'nofit', car: cands.slice().sort((a, b) => b.pop - a.pop)[0] };
+}
+
+/* ---------- prompts ---------- */
+const has = t => c => c.tags.has(t);
+const sporty = c => c.tags.has('sport') || c.tags.has('super') || c.tags.has('muscle');
+const P = [];
+const add = (f, label, text, test, note) => P.push({ f, label, text, test, note });
+[['jp', 'a Japanese'], ['de', 'a German'], ['us', 'an American'], ['it', 'an Italian'], ['uk', 'a British'], ['kr', 'a Korean'], ['se', 'a Swedish'], ['fr', 'a French'], ['cn', 'a Chinese']]
+  .forEach(([t, a]) => add('origin', 'Where it’s from', `Name ${a} car`, has(t)));
+add('body', 'Body style', 'Name an SUV', has('suv'));
+add('body', 'Body style', 'Name a pickup truck', has('truck'));
+add('body', 'Body style', 'Name a van or minivan', has('van'));
+add('body', 'Body style', 'Name a station wagon', has('wagon'));
+add('body', 'Body style', 'Name a convertible or roadster', has('conv'));
+add('body', 'Body style', 'Name a hatchback', has('hatch'));
+add('body', 'Body style', 'Name a sedan', has('sedan'));
+add('body', 'Body style', 'Name a coupe', has('coupe'));
+add('power', 'Under the hood', 'Name an electric car', has('ev'));
+add('power', 'Under the hood', 'Name a hybrid', has('hyb'), 'Plug-in hybrids count.');
+add('power', 'Under the hood', 'Name a car with a V8', has('v8'), 'Any generation that had one counts.');
+add('power', 'Under the hood', 'Name a car with a V12', has('v12'));
+add('power', 'Under the hood', 'Name a car with a V10', has('v10'));
+add('power', 'Under the hood', 'Name a mid-engine car', has('mid'));
+add('style', 'What it’s for', 'Name a sports car', sporty);
+add('style', 'What it’s for', 'Name a supercar', has('super'));
+add('style', 'What it’s for', 'Name a muscle car', has('muscle'));
+add('style', 'What it’s for', 'Name a luxury car', has('lux'));
+add('style', 'What it’s for', 'Name a car built to go off-road', has('off'));
+add('style', 'What it’s for', 'Name a hot hatch', has('hot'));
+add('style', 'What it’s for', 'Name a budget car', has('cheap'), 'Cheap to buy new, back when it was new.');
+add('trivia', 'Car trivia', 'Name a car with pop-up headlights', has('popup'));
+add('trivia', 'Car trivia', 'Name a car with doors that open upward', has('door'), 'Gullwing, scissor and butterfly doors all count.');
+add('trivia', 'Car trivia', 'Name a car famous from a movie or TV show', has('film'));
+add('trivia', 'Car trivia', 'Name a car that has served as a police car', has('police'));
+add('trivia', 'Car trivia', 'Name a car known for being a taxi', has('taxi'));
+add('era', 'Time machine', 'Name a car that’s been discontinued', has('dead'));
+add('era', 'Time machine', 'Name a car model that was on sale before 1980', has('classic'));
+add('name', 'What’s in a name', 'Name a car named after an animal', has('animal'));
+add('name', 'What’s in a name', 'Name a car named after a place', has('place'));
+add('name', 'What’s in a name', 'Name a car with a number in its name', c => /\d/.test(c.model));
+add('name', 'What’s in a name', 'Name a car whose model name ends in “A”', c => /a$/i.test(c.model.normalize('NFD').replace(/[^a-z]/gi, '')));
+const brandCount = {};
+CARS.forEach(c => brandCount[c.make] = (brandCount[c.make] || 0) + 1);
+Object.keys(brandCount).filter(m => brandCount[m] >= 8).forEach(m =>
+  add('brand', 'One brand only', `Name ${/^[AEIOU]/.test(m) ? 'an' : 'a'} ${m}`, c => c.make === m, 'Any model counts.'));
+const letterCount = {};
+CARS.forEach(c => { const L = c.model.normalize('NFD')[0].toUpperCase(); if (/[A-Z]/.test(L)) letterCount[L] = (letterCount[L] || 0) + 1; });
+Object.keys(letterCount).filter(L => letterCount[L] >= 10).forEach(L =>
+  add('letter', 'Letter round', `Name a car model starting with “${L}”`, c => c.model.normalize('NFD')[0].toUpperCase() === L, 'The model name has to start with it, not the brand.'));
+const both = (a, b) => c => a(c) && b(c);
+const not = f => c => !f(c);
+const makeIn = (...ms) => c => ms.includes(c.make);
+[
+  ['Name a Japanese sports car', both(has('jp'), sporty)],
+  ['Name a German SUV', both(has('de'), has('suv'))],
+  ['Name an American EV', both(has('us'), has('ev'))],
+  ['Name an Italian car with a V12', both(has('it'), has('v12'))],
+  ['Name an electric SUV', both(has('ev'), has('suv'))],
+  ['Name a British convertible', both(has('uk'), has('conv'))],
+  ['Name a Japanese SUV', both(has('jp'), has('suv'))],
+  ['Name a discontinued sports car', both(has('dead'), sporty)],
+  ['Name an American car that was on sale before 1980', both(has('us'), has('classic'))],
+  ['Name a German sports car', both(has('de'), sporty)],
+  ['Name a luxury SUV', both(has('lux'), has('suv'))],
+  ['Name a Korean SUV', both(has('kr'), has('suv'))],
+  ['Name a mid-engine car that isn’t a supercar', both(has('mid'), not(has('super')))],
+  ['Name a sedan with a V8', both(has('sedan'), has('v8'))],
+  ['Name a Japanese convertible', both(has('jp'), has('conv'))],
+  ['Name an Italian car that isn’t a Ferrari or Lamborghini', both(has('it'), not(makeIn('Ferrari', 'Lamborghini')))],
+  ['Name a car that isn’t from the US, Japan or Germany', c => !['us', 'jp', 'de'].some(t => c.tags.has(t))],
+  ['Name an EV that isn’t a Tesla', both(has('ev'), not(makeIn('Tesla')))],
+  ['Name a pickup that isn’t a Ford, Chevy or Ram', both(has('truck'), not(makeIn('Ford', 'Chevrolet', 'Ram')))],
+  ['Name a supercar that isn’t Italian', both(has('super'), not(has('it')))],
+  ['Name a hybrid that isn’t a Toyota', both(has('hyb'), not(makeIn('Toyota')))],
+  ['Name a muscle car that isn’t a Ford or Chevy', both(has('muscle'), not(makeIn('Ford', 'Chevrolet')))],
+  ['Name an SUV that isn’t American', both(has('suv'), not(has('us')))],
+  ['Name a station wagon that isn’t a Volvo', both(has('wagon'), not(makeIn('Volvo')))],
+  ['Name a British car with a V12', both(has('uk'), has('v12'))],
+  ['Name a convertible with a V8', both(has('conv'), has('v8'))],
+  ['Name an off-roader that isn’t a Jeep', both(has('off'), not(makeIn('Jeep')))],
+].forEach(([t, f]) => add('combo', 'Two-part prompt', t, f));
+P.forEach((p, i) => p.id = i);
+function valid(p) {
+  if (!p._v) p._v = CARS.filter(p.test).sort((a, b) => b.pop - a.pop || a.name.localeCompare(b.name));
+  return p._v;
+}
+
+/* ---------- scoring ---------- */
+const TIERS = [
+  { pts: 10, name: 'Daily Driver', cls: 't0', emo: '⬜' },
+  { pts: 25, name: 'Common Sight', cls: 't1', emo: '🟩' },
+  { pts: 50, name: 'Head Turner', cls: 't2', emo: '🟦' },
+  { pts: 75, name: 'Rare Find', cls: 't3', emo: '🟫' },
+  { pts: 100, name: 'Barn Find', cls: 't4', emo: '🟨' }
+];
+function score(p, car) {
+  const v = valid(p), r = v.indexOf(car);
+  const f = v.length > 1 ? r / (v.length - 1) : 1;
+  const ti = f < .3 ? 0 : f < .55 ? 1 : f < .78 ? 2 : f < .92 ? 3 : 4;
+  return { rank: r, of: v.length, tier: ti, pts: TIERS[ti].pts };
+}
+
+/* ---------- days ---------- */
+const DAY_ONE = new Date(2026, 10, 14);
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); };
+const dayNum = () => Math.round((today() - DAY_ONE) / 864e5) + 1;
+const FAM_W = { origin: 1, body: 1, power: 1, style: 1, trivia: 1.2, era: .5, name: 1, brand: .8, letter: .6, combo: 1.4 };
+function rawDaily(key, avoid = new Set()) {
+  const r = rng(hash('rare-ride:' + key));
+  const fams = Object.keys(FAM_W), out = [];
+  while (out.length < 5 && fams.length) {
+    let x = r() * fams.reduce((a, f) => a + FAM_W[f], 0), k = 0;
+    while (x > FAM_W[fams[k]] && k < fams.length - 1) { x -= FAM_W[fams[k]]; k++; }
+    const f = fams.splice(k, 1)[0];
+    const pool = P.filter(p => p.f === f && valid(p).length >= 8 && !avoid.has(p.id));
+    if (pool.length) out.push(pick(pool, r));
+  }
+  return shuffle(out, r);
+}
+function dailyPrompts(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  const prev = dayKey(new Date(y, m - 1, d - 1)), prev2 = dayKey(new Date(y, m - 1, d - 2));
+  const ids = ps => ps.map(p => p.id);
+  // approximate yesterday's set (both with and without its own avoid list) so prompts don't repeat back to back
+  const avoid = new Set([...ids(rawDaily(prev)), ...ids(rawDaily(prev, new Set(ids(rawDaily(prev2)))))]);
+  return rawDaily(key, avoid);
+}
+
+/* ---------- state ---------- */
+const S = { mode: null, prompts: [], i: 0, results: [], timer: null, deadline: 0, tries: [], practice: { laps: 0, pts: 0, recent: [] } };
+const ROUND_MS = 25000;
+const dailyKeyNow = () => 'rareride:daily:' + dayKey(today());
+
+function show(id) {
+  ['home', 'play', 'reveal', 'summary'].forEach(s => { const el = $(s); el.hidden = s !== id; el.style.display = s === id ? 'flex' : 'none'; });
+  window.scrollTo(0, 0);
+}
+function odo(el, n, width = 3) {
+  el.innerHTML = String(n).padStart(width, '0').split('').map(d => `<i>${d}</i>`).join('');
+}
+
+/* ---------- home ---------- */
+function renderHome() {
+  clearInterval(S.timer);
+  S.mode = null;
+  $('homeBtn').disabled = false;
+  const saved = store.get(dailyKeyNow(), null);
+  const done = saved && saved.results && saved.results.length >= 5 && saved.results.every(r => r.done);
+  const n = dayNum();
+  $('dailyEyebrow').textContent = `Daily drive #${n}`;
+  $('topMeta').textContent = new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  if (done) {
+    const tot = saved.results.reduce((a, r) => a + r.pts, 0);
+    $('dailyStatus').textContent = `Done for today: ${tot} / 500. A new drive unlocks at midnight.`;
+    $('dailyBtn').textContent = 'See today’s results';
+  } else if (saved && saved.results && saved.results.length) {
+    $('dailyStatus').textContent = `You’re ${saved.results.length} of 5 in. Prompts you left mid-round score 0.`;
+    $('dailyBtn').textContent = 'Resume today’s drive';
+  } else {
+    $('dailyStatus').textContent = 'Everyone gets the same five prompts today. One run per day.';
+    $('dailyBtn').textContent = 'Start today’s drive';
+  }
+  const st = store.get('rareride:stats', { streak: 0, best: 0, played: 0, barn: 0, last: null });
+  const yKey = (() => { const d = today(); d.setDate(d.getDate() - 1); return dayKey(d); })();
+  const streak = (st.last === dayKey(today()) || st.last === yKey) ? st.streak : 0;
+  $('stats').innerHTML = [
+    ['Streak', streak], ['Daily best', st.best], ['Drives', st.played], ['Barn finds', st.barn]
+  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+  show('home');
+}
+$('legend').innerHTML = TIERS.map(t => `<span class="chip ${t.cls}">${t.name}<span class="mono">${t.pts}</span></span>`).join('');
+$('fineprint').textContent = `The garage holds ${CARS.length} cars, and each one has a popularity rating. Your answer is ranked against every car in the garage that fits the prompt. A real car we haven’t added yet won’t count, so try another.`;
+
+/* ---------- daily ---------- */
+function startDaily() {
+  const key = dailyKeyNow();
+  const saved = store.get(key, { results: [] });
+  S.mode = 'daily';
+  S.dkey = key;
+  S.prompts = dailyPrompts(dayKey(today()));
+  S.results = saved.results || [];
+  if (S.results.length >= 5) return showSummary();
+  S.i = S.results.length;
+  startRound();
+}
+function saveDaily() { store.set(S.dkey, { results: S.results }); }
+
+/* ---------- practice ---------- */
+function nextPracticePrompt() {
+  const fams = [...new Set(P.map(p => p.f))];
+  let p;
+  for (let tries = 0; tries < 40; tries++) {
+    const f = pick(fams);
+    p = pick(P.filter(x => x.f === f && valid(x).length >= 6));
+    if (!S.practice.recent.includes(p.id)) break;
+  }
+  S.practice.recent = [p.id, ...S.practice.recent].slice(0, 12);
+  return p;
+}
+function startPractice() {
+  S.mode = 'practice';
+  S.practice.laps = 0; S.practice.pts = 0;
+  S.prompts = [nextPracticePrompt()]; S.i = 0; S.results = [];
+  startRound();
+}
+
+/* ---------- a round ---------- */
+function startRound() {
+  const p = S.prompts[S.i];
+  S.tries = [];
+  if (S.mode === 'daily') {
+    S.results[S.i] = { pid: p.id, text: p.text, car: null, pts: 0, tier: -1, done: false };
+    saveDaily();
+    $('hudLeft').textContent = `Daily #${dayNum()} · Exit ${S.i + 1} of 5`;
+    $('hudRight').textContent = `${S.results.reduce((a, r) => a + r.pts, 0)} pts`;
+    $('exitTab').textContent = `EXIT ${S.i + 1}`;
+    $('homeBtn').disabled = true;
+  } else {
+    $('hudLeft').textContent = `Practice · Prompt ${S.practice.laps + 1}`;
+    $('hudRight').textContent = `${S.practice.pts} pts`;
+    $('exitTab').textContent = 'PRACTICE';
+    $('homeBtn').disabled = false;
+  }
+  $('famLabel').textContent = p.label;
+  $('promptText').textContent = p.text;
+  $('promptNote').hidden = !p.note;
+  $('promptNote').textContent = p.note || '';
+  $('fb').textContent = ''; $('fb').className = 'fb';
+  $('tries').innerHTML = '';
+  $('triesCount').textContent = '';
+  $('ans').value = '';
+  show('play');
+  setTimeout(() => $('ans').focus({ preventScroll: true }), 30);
+  S.deadline = performance.now() + ROUND_MS;
+  clearInterval(S.timer);
+  S.timer = setInterval(tick, 100);
+  tick();
+}
+function tick() {
+  const left = Math.max(0, S.deadline - performance.now());
+  const bar = $('timerBar');
+  bar.style.width = (left / ROUND_MS * 100) + '%';
+  bar.classList.toggle('low', left < 6000);
+  $('secs').textContent = Math.ceil(left / 1000);
+  if (left <= 0) finishRound(null);
+}
+function submit(e) {
+  e.preventDefault();
+  if (S.mode == null || $('play').hidden) return;
+  const val = $('ans').value.trim();
+  const p = S.prompts[S.i];
+  const r = match(val, p);
+  const fb = $('fb');
+  if (r.t === 'empty') return;
+  if (r.t === 'ok') return finishRound(r.car);
+  let msg;
+  if (r.t === 'nofit') { msg = `${r.car.name} doesn’t fit this one.`; S.tries.push(r.car.name); }
+  else if (r.t === 'brand') msg = 'That’s a brand. Name a specific model.';
+  else { msg = `“${val}” isn’t in the garage. Check the spelling or try another.`; S.tries.push(val); }
+  fb.textContent = msg; fb.className = 'fb bad';
+  $('tries').innerHTML = S.tries.slice(-6).map(t => `<span>${esc(t)}</span>`).join('');
+  $('triesCount').textContent = S.tries.length ? `${S.tries.length} miss${S.tries.length > 1 ? 'es' : ''}` : '';
+  const inp = $('ans');
+  inp.classList.remove('shake'); void inp.offsetWidth; inp.classList.add('shake');
+  inp.select();
+}
+function finishRound(car) {
+  clearInterval(S.timer);
+  const p = S.prompts[S.i];
+  const sc = car ? score(p, car) : null;
+  const res = { pid: p.id, text: p.text, car: car ? car.name : null, pts: sc ? sc.pts : 0, tier: sc ? sc.tier : -1, done: true };
+  if (S.mode === 'daily') { S.results[S.i] = res; saveDaily(); }
+  else { S.practice.laps++; S.practice.pts += res.pts; }
+  renderReveal(p, car, sc);
+}
+
+/* ---------- reveal ---------- */
+function renderReveal(p, car, sc) {
+  const daily = S.mode === 'daily';
+  $('revHudLeft').textContent = daily ? `Daily #${dayNum()} · Exit ${S.i + 1} of 5` : `Practice · Prompt ${S.practice.laps}`;
+  $('revHudRight').textContent = daily ? `${S.results.reduce((a, r) => a + r.pts, 0)} pts` : `${S.practice.pts} pts`;
+  $('revPrompt').textContent = p.text;
+  $('revAnswer').textContent = car ? car.name : 'No answer';
+  odo($('revPts'), sc ? sc.pts : 0);
+  const badge = $('revTier');
+  if (sc) { badge.className = 'tier-badge ' + TIERS[sc.tier].cls; badge.textContent = TIERS[sc.tier].name; }
+  else { badge.className = 'tier-badge tnone'; badge.textContent = 'Out of time'; }
+  $('strip').innerHTML = TIERS.map((t, i) => `<div class="${t.cls}${sc && sc.tier === i ? ' on' : ''}">${t.pts}</div>`).join('');
+  const v = valid(p);
+  $('revRank').textContent = sc
+    ? `#${sc.rank + 1} most common of the ${sc.of} cars that fit.`
+    : `${v.length} cars in the garage fit this prompt.`;
+  $('commonList').innerHTML = v.slice(0, 3).map(c => `<li>${esc(c.name)}</li>`).join('');
+  const rare = v.slice(-Math.min(12, v.length)).filter(c => !car || c !== car);
+  $('rareList').innerHTML = shuffle(rare).slice(0, 3).map(c => `<li>${esc(c.name)}</li>`).join('');
+  const nb = $('nextBtn');
+  if (daily) {
+    nb.textContent = S.i >= 4 ? 'See today’s results' : 'Next exit';
+    $('quitBtn').hidden = true;
+    $('homeBtn').disabled = false;
+  } else {
+    nb.textContent = 'Next prompt';
+    $('quitBtn').hidden = false;
+    $('quitBtn').textContent = 'Done practicing';
+  }
+  show('reveal');
+  setTimeout(() => nb.focus({ preventScroll: true }), 30);
+}
+function next() {
+  if (S.mode === 'daily') {
+    if (S.i >= 4) return showSummary();
+    S.i++; startRound();
+  } else {
+    S.prompts = [nextPracticePrompt()]; S.i = 0; startRound();
+  }
+}
+
+/* ---------- summary ---------- */
+function showSummary() {
+  clearInterval(S.timer);
+  $('homeBtn').disabled = false;
+  const res = S.results;
+  const tot = res.reduce((a, r) => a + r.pts, 0);
+  const n = dayNum();
+  // record stats once per day
+  const st = store.get('rareride:stats', { streak: 0, best: 0, played: 0, barn: 0, last: null });
+  const tk = dayKey(today());
+  if (st.last !== tk) {
+    const y = today(); y.setDate(y.getDate() - 1);
+    st.streak = st.last === dayKey(y) ? st.streak + 1 : 1;
+    st.last = tk; st.played++; st.best = Math.max(st.best, tot);
+    st.barn += res.filter(r => r.tier === 4).length;
+    store.set('rareride:stats', st);
+  }
+  $('sumEyebrow').textContent = `Daily drive #${n} complete`;
+  odo($('sumTotal'), tot);
+  $('sumRows').innerHTML = res.map(r => {
+    const t = TIERS[r.tier];
+    return `<li><span class="q">${esc(r.text)}</span><span class="a">${r.car ? esc(r.car) : 'No answer'}</span>` +
+      (t ? `<span class="chip ${t.cls}">${t.name}<span class="mono">${t.pts}</span></span>` : `<span class="chip tnone">0</span>`) + '</li>';
+  }).join('');
+  S.share = `Rare Ride #${n} · ${tot}/500\n${res.map(r => r.tier >= 0 ? TIERS[r.tier].emo : '⬛').join('')}`;
+  $('shareText').hidden = true; $('shareMsg').textContent = '';
+  show('summary');
+  updateCountdown();
+}
+function updateCountdown() {
+  const now = new Date();
+  const mid = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const s = Math.max(0, Math.floor((mid - now) / 1000));
+  const hh = String(Math.floor(s / 3600)).padStart(2, '0'), mm = String(Math.floor(s % 3600 / 60)).padStart(2, '0'), ss = String(s % 60).padStart(2, '0');
+  $('nextIn').innerHTML = `Next drive in <span class="mono">${hh}:${mm}:${ss}</span>`;
+}
+setInterval(() => { if (!$('summary').hidden) updateCountdown(); }, 1000);
+function copyShare() {
+  const ta = $('shareText');
+  const fallback = () => { ta.hidden = false; ta.value = S.share; ta.focus(); ta.select(); $('shareMsg').textContent = 'Select the text and copy it.'; };
+  try {
+    navigator.clipboard.writeText(S.share).then(() => { $('shareMsg').textContent = 'Copied. Paste it anywhere.'; }, fallback);
+  } catch (e) { fallback(); }
+}
+
+/* ---------- wiring ---------- */
+$('ansForm').addEventListener('submit', submit);
+$('passBtn').addEventListener('click', () => finishRound(null));
+$('nextBtn').addEventListener('click', next);
+$('quitBtn').addEventListener('click', renderHome);
+$('dailyBtn').addEventListener('click', startDaily);
+$('practiceBtn').addEventListener('click', startPractice);
+$('sumPractice').addEventListener('click', startPractice);
+$('shareBtn').addEventListener('click', copyShare);
+$('homeBtn').addEventListener('click', () => { if (!$('homeBtn').disabled) renderHome(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('home').hidden) renderHome(); });
+renderHome();
+</script>
+</body>
+</html>
